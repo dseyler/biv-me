@@ -4,11 +4,11 @@
 ![Python version](https://img.shields.io/badge/python-3.11-blue)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Test macOS** [![macOS](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dev/actions/workflows/macos.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dev/actions/workflows/macos.yml)
+**Test macOS** [![macOS](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/macos.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/macos.yml)
 
-**Test Linux** [![Linux](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dev/actions/workflows/linux.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dev/actions/workflows/linux.yml)
+**Test Linux** [![Linux](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/linux.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/linux.yml)
 
-**Test Windows** [![Windows](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dev/actions/workflows/windows.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dev/actions/workflows/windows.yml)
+**Test Windows** [![Windows](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml)
 
 </div>
 
@@ -21,6 +21,10 @@ For a detailed description of the end-to-end image to mesh pipeline, including i
 
 For a detailed description regarding the fitting of the biventricular model, please refer to:
 **Mauger, C., Gilbert, K., Suinesiaputra, A., Pontre, B., Omens, J., McCulloch, A., & Young, A. (2018, July). An iterative diffeomorphic algorithm for registration of subdivision surfaces: application to congenital heart disease. In 2018 40th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC) (pp. 596-599). IEEE.** [DOI: 10.1109/EMBC.2018.8512394](https://doi.org/10.1109/EMBC.2018.8512394)
+
+CMR DICOMs           |to| Contours              |to|              biv-me models                |
+:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|
+![Images](images/image.gif)  |     | ![contours](images/contours.gif) | |![meshes](images/meshes.gif)
 
 ## 🚀 Installation Guide
 -----------------------------------------------
@@ -45,7 +49,7 @@ conda activate bivme311
 ```
 
 ### Step 3: Install the biv-me packages
-Once the conda environment has been initialised, the necessary libraries and packages need to be installed. In your terminal, navigate to where you have cloned the repository to, e.g:
+Once the conda environment has been initialised, the necessary libraries and packages need to be installed. In your terminal, navigate to where you have cloned the repository to, e.g.,
 
 ```bash
 cd biv-me
@@ -153,7 +157,7 @@ By default, this will generate new GPFiles from the DICOMs for *patient1* in `ex
 **If you did not configure the preprocessing in Steps 4 and 5 of the installation, you will not be able to run preprocessing**. If so, make sure to set *preprocessing=False* in the config file before running. If you turn off preprocessing, running `src/bivme/main.py` will carry out fitting only on the example GPFiles in `example/guidepoints/default`.
 
 #### **Sample output**
-Example biv-me models for *patient1* have been already fitted, and can be found in `example/fitted-models/default`. These are provided in .txt, .vtk, obj, and .html formats. The .html is only stored for one frame due to storage considerations. The first frame of the fitted models in .vtk format is visualised below using [Paraview](https://www.paraview.org/). Your fitted models should ideally look something like this.
+Example biv-me models for *patient1* have been already fitted, and can be found in `example/fitted-models/default`. These are provided in .txt, .vtk, and .obj formats. The first frame of the fitted models in .vtk format is visualised below using [Paraview](https://www.paraview.org/). Your fitted models should ideally look something like this.
 
 ![Model4ch](images/Model1.png) 
 
@@ -176,9 +180,9 @@ As long as the DICOM images are organised separately by case, **they can be arra
 ### Fitting biv-me models
 When you run fitting, biv-me models will be created for each case for which there are GPFiles and a SliceInfoFile.txt file. 
 
-If you already have GPFiles,  then you do not need to run preprocessing. Simply set the *gp_directory* in the config file to the folder where you have GPFiles and SliceInfoFile.txt files, separated into one folder per case. 
+If you already have GPFiles, then you do not need to run preprocessing. Simply set the *gp_directory* in the config file to the folder where you have GPFiles and SliceInfoFile.txt files, separated into one folder per case. 
 
-If you want to generate GPFiles yourself (i.e. not using biv-me preprocessing), but you don't know how to, the example GPFiles in `example\guidepoints\default` can serve as reference for the required format.
+If you want to generate GPFiles yourself (i.e., not using biv-me preprocessing), but you don't know how to, the example GPFiles in `example/guidepoints/default` can serve as reference for the required format.
 
 Models will be generated as .txt files containing mesh vertex coordinates, html plots for visualisation, and (optionally) .obj or .vtk files for LV endocardial, RV endocardial, and epicardial meshes.
 
@@ -208,22 +212,22 @@ usage: compute_volume.py [-h] [-mdir MODEL_DIR] [-o OUTPUT_PATH] [-b BIV_MODEL_F
 | `-p PRECISION`        | Sets the output precision (default: 2 decimal places).                                        |
 
 #### **Example Usage** 
-Example data is available in `example/fitted-models`. To compute the volumes using this data, run the following command:
+Example data is available in `example/fitted-models/default`. To compute the volumes using this data, run the following command:
 
 ```python
 cd src/bivme/analysis
-python compute_volume.py -mdir ../../../example/fitted-models -p 1 -o example_volumes
+python compute_volume.py -mdir ../../../example/fitted-models/default -p 1 -o example_volumes
 ```
 
-This will process the biv-me models in the `../../../example/fitted-models` directory, compute the volumes with a precision of 1 decimal place, and save the results in the `example_volumes` directory. The volumes will be saved in the `lvrv_volumes.csv` file.
+This will process the biv-me models in the `../../../example/fitted-models/default` directory, compute the volumes with a precision of 1 decimal place, and save the results in the `example_volumes` directory. The volumes will be saved in the `lvrv_volumes.csv` file.
 
 **Sample Output** <br> 
 The output file will look like this:
 
 | **Name**     | **Frame** | **LV Volume (lv_vol)** | **LV Mass (lvm)** | **RV Volume (rv_vol)** | **RV Mass (rvm)** | **LV Epicardial Volume (lv_epivol)** | **RV Epicardial Volume (rv_epivol)** |
 |--------------|-----------|------------------------|-------------------|------------------------|-------------------|---------------------------------------|--------------------------------------|
-| patient_1    | 0         | 241.5                  | 218.3             | 220                    | 62.5              | 449.4                                 | 279.5                                |
-| patient_1    | 1         | 252.2                  | 223.8             | 225.9                  | 69.3              | 465.4                                 | 291.8                                |
+| patient_1    | 0         | 174.5                  | 132.6            | 170.1                    | 54.2              | 300.8                                 | 221.7                               |
+| patient_1    | 1         | 169.4                  | 134.2            | 165.3                 | 51.8              | 297.2                                | 214.7                               |
 
 
 ### Calculating strains from models 
@@ -255,14 +259,14 @@ usage: compute_global_longitudinal_strain.py [-h] [-mdir MODEL_DIR] [-o OUTPUT_P
 
 
 #### **Example Usage**
-Example data is available in `example/fitted-models`. To compute the circuferential strains using this data, run the following command:
+Example data is available in `example/fitted-models/default`. To compute the circuferential strains using this data, run the following command:
 
 ```python
 cd src/bivme/analysis
-python compute_global_circumferential_strain.py -mdir ../../../example/fitted-models -p 1 -o example_strains -ed 0
+python compute_global_circumferential_strain.py -mdir ../../../example/fitted-models/default -p 1 -o example_strains -ed 0
 ```
 
-This will process the biv-me models in the `../../../example/fitted-models` directory, compute the global circumferential strain with a precision of 1 decimal place, and save the results in the `example_strains` directory. The GCS will be saved in the `global_circumferential_strain.csv` file. The first frame will be used as ED. 
+This will process the biv-me models in the `../../../example/fitted-models/default` directory, compute the global circumferential strain with a precision of 1 decimal place, and save the results in the `example_strains` directory. The GCS will be saved in the `global_circumferential_strain.csv` file. The first frame will be used as ED. 
 
 **Sample Output** <br>
 The output file will look like this:
@@ -270,7 +274,8 @@ The output file will look like this:
 | **name**       | **frame** | **lv_gcs_apex** | **lv_gcs_mid** | **lv_gcs_base** | **rvfw_gcs_apex** | **rvfw_gcs_mid** | **rvfw_gcs_base** | **rvs_gcs_apex** | **rvs_gcs_mid** | **rvs_gcs_base** |
 |------------|-------|-------------|------------|-------------|----------------|---------------|----------------|---------------|--------------|---------------|
 | patient_1 | 0     | 0           | 0          | 0           | 0              | 0             | 0              | 0             | 0            | 0             |
-| patient_1 | 1     | 0.019710907 | 0          | -0.00747012 | -0.011037528   | 0.005964215   | 0.034870641    | 0.038321168   | 0.032425422  | 0.0087241     |
+| patient_1 | 1     | -0.007819288	| -0.011855365	| -0.024038462	| 0.00814901	| -0.008879781	| 0.013150685 |	0.017902813	| -0.010819165	|-0.002242152
+
 
 
 ### Calculating wall thickness from models <br>
@@ -294,18 +299,18 @@ usage: compute_global_circumferential_strain.py [-h] [-mdir MODEL_DIR] [-o OUTPU
 
 
 #### **Example Usage**
-Example data is available in `example/fitted-models`. To compute the wall thickness using this data, run the following command:
+Example data is available in `example/fitted-models/default`. To compute the wall thickness using this data, run the following command:
 
 ```
-python compute_wall_thickness.py -mdir ../../../example/fitted-models -o example_thickness
+python compute_wall_thickness.py -mdir ../../../example/fitted-models/default -o example_thickness
 ```
 
-This will process the biv-me models in the `../../../example/fitted-models` directory, compute the wall thickness at a resolution of 1mm, and save the results in the `example_thickness` directory. Wall thickness is sampled and saved at the location of each vertex and can be visualised in Paraview as vertex color or in 3D slicer.
+This will process the biv-me models in the `../../../example/fitted-models/default` directory, compute the wall thickness at a resolution of 1mm, and save the results in the `example_thickness` directory. Wall thickness is sampled and saved at the location of each vertex and can be visualised in Paraview as vertex color or in 3D slicer.
 
 Adding the `-s` flag to the above command will also generate 4 extra nifti files per model: 2 3D masks with background=0, cavity=1, and wall=2 (`labeled_image_lv*.nii` and `labeled_image_lv*.nii`) and 2 3D mask containing thickness values at each voxel (`lv_thickness*.nii` and `rv_thickness*.nii`).
 
 ```
-python compute_wall_thickness.py -mdir ../../../example/fitted-models -o example_thickness -s
+python compute_wall_thickness.py -mdir ../../../example/fitted-models/default -o example_thickness -s
 ```
 
 #### **Sample Output**
