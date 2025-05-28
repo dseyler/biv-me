@@ -49,7 +49,7 @@ conda activate bivme311
 ```
 
 ### Step 3: Install the biv-me packages
-Once the conda environment has been initialised, the necessary libraries and packages need to be installed. In your terminal, navigate to where you have cloned the repository to, e.g:
+Once the conda environment has been initialised, the necessary libraries and packages need to be installed. In your terminal, navigate to where you have cloned the repository to, e.g.,
 
 ```bash
 cd biv-me
@@ -157,7 +157,7 @@ By default, this will generate new GPFiles from the DICOMs for *patient1* in `ex
 **If you did not configure the preprocessing in Steps 4 and 5 of the installation, you will not be able to run preprocessing**. If so, make sure to set *preprocessing=False* in the config file before running. If you turn off preprocessing, running `src/bivme/main.py` will carry out fitting only on the example GPFiles in `example/guidepoints/default`.
 
 #### **Sample output**
-Example biv-me models for *patient1* have been already fitted, and can be found in `example/fitted-models/default`. These are provided in .txt, .vtk, and obj formats. The first frame of the fitted models in .vtk format is visualised below using [Paraview](https://www.paraview.org/). Your fitted models should ideally look something like this.
+Example biv-me models for *patient1* have been already fitted, and can be found in `example/fitted-models/default`. These are provided in .txt, .vtk, and .obj formats. The first frame of the fitted models in .vtk format is visualised below using [Paraview](https://www.paraview.org/). Your fitted models should ideally look something like this.
 
 ![Model4ch](images/Model1.png) 
 
@@ -180,9 +180,9 @@ As long as the DICOM images are organised separately by case, **they can be arra
 ### Fitting biv-me models
 When you run fitting, biv-me models will be created for each case for which there are GPFiles and a SliceInfoFile.txt file. 
 
-If you already have GPFiles,  then you do not need to run preprocessing. Simply set the *gp_directory* in the config file to the folder where you have GPFiles and SliceInfoFile.txt files, separated into one folder per case. 
+If you already have GPFiles, then you do not need to run preprocessing. Simply set the *gp_directory* in the config file to the folder where you have GPFiles and SliceInfoFile.txt files, separated into one folder per case. 
 
-If you want to generate GPFiles yourself (i.e. not using biv-me preprocessing), but you don't know how to, the example GPFiles in `example/guidepoints/default` can serve as reference for the required format.
+If you want to generate GPFiles yourself (i.e., not using biv-me preprocessing), but you don't know how to, the example GPFiles in `example/guidepoints/default` can serve as reference for the required format.
 
 Models will be generated as .txt files containing mesh vertex coordinates, html plots for visualisation, and (optionally) .obj or .vtk files for LV endocardial, RV endocardial, and epicardial meshes.
 
