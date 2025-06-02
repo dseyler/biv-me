@@ -12,7 +12,7 @@
 
 </div>
 
-This repository provides an end-to-end pipeline for generating guidepoint files (**GPFiles**) from CMR DICOMs, fitting **biv-me models**, and computing **functional cardiac metrics** such as volumes, strains, and wall thickness.
+This repository provides an end-to-end pipeline for generating guidepoint files (**GPFiles**) from CMR DICOMs, fitting biventricular models (**biv-me models**), and computing **functional cardiac metrics** such as volumes, strains, and wall thickness.
 
 Example data is available in the `example/` folder, including input DICOMs, GPFiles, and fitted models for testing and reference.
 
