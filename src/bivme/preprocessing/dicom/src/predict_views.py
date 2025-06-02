@@ -1,4 +1,5 @@
 import os
+import glob
 import sys
 import shutil
 import pydicom
@@ -148,12 +149,19 @@ def predict_on_images(vs):
     # Load model from file
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    loaded_model_path = os.path.join(vs.model, "ViewSelection", "resnet50-v13.pth")
+    try:
+        loaded_model_path = glob.glob(os.path.join(vs.model, "ViewSelection") + "/resnet50*.pth")[0]
+    except IndexError:
+        vs.my_logger.error("No image view selection model found. Make sure you followed the installation instructions for installing the deep learning models.")
+        sys.exit(0)
+
     loaded_model = torchvision.models.resnet50()
     loaded_model.fc = nn.Linear(2048, 10)
 
     if not torch.cuda.is_available():
         loaded_model.load_state_dict(torch.load(loaded_model_path, map_location=torch.device('cpu')))
+    else:
+        loaded_model.load_state_dict(torch.load(loaded_model_path))
 
     model = loaded_model
 
