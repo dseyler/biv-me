@@ -22,9 +22,9 @@ For a detailed description of the end-to-end image to mesh pipeline, including i
 For a detailed description regarding the fitting of the biventricular model, please refer to:
 **Mauger, C., Gilbert, K., Suinesiaputra, A., Pontre, B., Omens, J., McCulloch, A., & Young, A. (2018, July). An iterative diffeomorphic algorithm for registration of subdivision surfaces: application to congenital heart disease. In 2018 40th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC) (pp. 596-599). IEEE.** [DOI: 10.1109/EMBC.2018.8512394](https://doi.org/10.1109/EMBC.2018.8512394)
 
-CMR DICOMs           |to| Contours              |to|              biv-me models                |
-:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|
-![Images](images/image.gif)  |     | ![contours](images/contours.gif) | |![meshes](images/meshes.gif)
+CMR DICOMs           | Contours                   |        biv-me models                |
+:-------------------------:|:-------------------------:|:-------------------------:|
+![Images](images/image.gif) | ![contours](images/contours.gif) |![meshes](images/meshes.gif)
 
 ## 🚀 Installation Guide
 -----------------------------------------------
