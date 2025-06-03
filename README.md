@@ -1,5 +1,8 @@
 <div align="center">
 
+### 4th June, 2025: [New v1.1 deep learning models for view selection and segmentation are available!](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) 
+Refer to the [FAQs](#faqs) on how to update your models.
+
 # Biventricular modelling pipeline (biv-me)
 ![Python version](https://img.shields.io/badge/python-3.11-blue)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -11,6 +14,8 @@
 **Test Windows** [![Windows](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml)
 
 </div>
+
+
 
 This repository provides an end-to-end pipeline for generating guidepoint files (**GPFiles**) from CMR DICOMs, fitting biventricular models (**biv-me models**), and computing **functional cardiac metrics** such as volumes, strains, and wall thickness.
 
@@ -365,15 +370,15 @@ git pull
 git submodule update --init
 ```
 
-This will update both biv-me and the deep learning models. If you would rather only update the deep learning models to the latest version, you can run
+This will update both biv-me and the deep learning models. If you would rather only update the deep learning models to the latest version without updating biv-me, you can run
 
 ```bash
 git submodule update --init --remote
 ```
 
-### *I have updated the deep learning models but they do not work as well on my data. How do I roll back to a previous version?*
+### *I have updated the deep learning models but they perform worse on my data. How do I roll back to a previous version?*
 
-If you want to access any previous version of the deep learning models, you can visit the [deep learning model repository](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) to find the tag for that version (e.g. v1.1).
+If you want to access any previous version of the deep learning models, you can visit the [deep learning model repository](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) to find the tag for that version (e.g. v1.0).
 
 To roll back the models, you need to checkout the submodule at the version you want. To do so, type the following into your terminal, where 'tag' is the tag for the version of the models you want to roll back to.
 
@@ -390,7 +395,7 @@ git checkout v1.0
 
 ### *This is fine, but can you generate LV only geometries?*
 
-At the moment, we don't have a way of generating LV only (endo and epicardium) models. However, it is a priority feature for development and you can expect it to be released by August 2025.
+At the moment, we don't have a direct way of generating LV only (endocardium and epicardium) models. However, it is a priority feature for development and you can expect it to be released by September 2025.
 
 ### *How about the atria?*
 
