@@ -38,7 +38,7 @@ In a Git-enabled terminal, enter the following command to clone the repository.
 ```bash
 git clone https://github.com/UOA-Heart-Mechanics-Research/biv-me.git
 ```
-Alternatively, you can use software such as [GitHub Desktop](https://desktop.github.com/download/) or [GitKraken](https://www.gitkraken.com/) to clone the repository using the repository url.
+Alternatively, you can use software such as [GitHub Desktop](https://desktop.github.com/download/) or [GitKraken](https://www.gitkraken.com/) to clone the repository using the repository url. If you are prompted to initialise submodules within these applications after cloning the repository, **select no**. We will initialise these later.
 
 ### Step 2: Setup the virtual environment
 If you have [Anaconda](https://www.anaconda.com/docs/getting-started/anaconda/install) or [miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main), you can create the conda virtual environment by entering the following commands into your terminal (or Anaconda Command Prompt if using Windows).
@@ -75,6 +75,8 @@ If you don't have Git LFS installed, you can [follow these instructions to insta
 ```bash
 git submodule update --init
 ```
+By default, this will install the submodule associated with this version of biv-me. Refer to the [FAQs](#faqs) for more information on version control of deep learning models.
+
 You can verify that the models have been downloaded by checking that the below directories contain .pth and .joblib files that are larger than 1 KB. If they don't, refer to the troubleshooting section below.
 
     src 
@@ -341,6 +343,59 @@ usage: detect_intersection.py [-h] [-config CONFIG_FILE]
 | `-s SAVE_SEGMENTATION_FLAG` | Boolean flag indicating whether to save 3D masks
 
 The config file should be the one used to fit the original models. Refitted models will be saved in config["output_fitting"]["output_directory"]/corrected_models.
+
+## FAQs
+### *How often will the deep learning models be updated?*
+
+We currently intend to release new segmentation models every few months when we have a sufficient number of new cases to add to the training data. There is no easy way to communicate when models have been updated, so keep an eye on the GitHub page for any notices. When the models are updated, a new release tag will be given to biv-me that matches the release tag in the [deep learning model repository](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models), so you can keep track of each update.
+
+We are always looking for more datasets to add to our models to make them more generalisable. If you are willing to contribute some data, get in contact with us at joshua.dillon@auckland.ac.nz or charlene.1.mauger@kcl.ac.uk.
+
+### *How do I update my deep learning models?*
+
+If you have already installed biv-me and new deep learning models have been released since you installed it, you can simply pull the latest version of biv-me from the main branch...
+
+```bash
+git pull
+```
+
+...and rerun the command to install the git submodule.
+
+```bash
+git submodule update --init
+```
+
+This will update both biv-me and the deep learning models. If you would rather only update the deep learning models to the latest version, you can run
+
+```bash
+git submodule update --init --remote
+```
+
+### *I have updated the deep learning models but they do not work as well on my data. How do I roll back to a previous version?*
+
+If you want to access any previous version of the deep learning models, you can visit the [deep learning model repository](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) to find the tag for that version (e.g. v1.1).
+
+To roll back the models, you need to checkout the submodule at the version you want. To do so, type the following into your terminal, where 'tag' is the tag for the version of the models you want to roll back to.
+
+```bash
+cd src/bivme/preprocessing/dicom/models
+git checkout 'tag'
+```
+
+For example, if I wanted to roll back to the v1.0 models, I would enter
+
+```bash
+git checkout v1.0
+```
+
+### *This is fine, but can you generate LV only geometries?*
+
+At the moment, we don't have a way of generating LV only (endo and epicardium) models. However, it is a priority feature for development and you can expect it to be released by August 2025.
+
+### *How about the atria?*
+
+We are actively developing a four chamber fit (left ventricle, right ventricle, left atrium, and right atrium) to be released in a future version of biv-me. 
+
 
 ## Contribution - Notation
 -----------------------------------------------
