@@ -16,7 +16,6 @@ Refer to the [FAQs](#faqs) on how to update your models.
 </div>
 
 
-
 This repository provides an end-to-end pipeline for generating guidepoint files (**GPFiles**) from CMR DICOMs, fitting biventricular models (**biv-me models**), and computing **functional cardiac metrics** such as volumes, strains, and wall thickness.
 
 Example data is available in the `example/` folder, including input DICOMs, GPFiles, and fitted models for testing and reference.
@@ -233,13 +232,13 @@ The output file will look like this:
 
 | **Name**     | **Frame** | **LV Volume (lv_vol)** | **LV Mass (lvm)** | **RV Volume (rv_vol)** | **RV Mass (rvm)** | **LV Epicardial Volume (lv_epivol)** | **RV Epicardial Volume (rv_epivol)** |
 |--------------|-----------|------------------------|-------------------|------------------------|-------------------|---------------------------------------|--------------------------------------|
-| patient_1    | 0         | 174.5                  | 132.6            | 170.1                    | 54.2              | 300.8                                 | 221.7                               |
-| patient_1    | 1         | 169.4                  | 134.2            | 165.3                 | 51.8              | 297.2                                | 214.7                               |
+| patient_1    | 0         | 172.6                 | 128.5           | 172.8                    | 53.8              | 295.0                                 | 224.0                               |
+| patient_1    | 1         | 166.2                 | 129.3            | 172.4                | 54.1             | 289.3                                | 223.9                               |
 
 
 ### Calculating strains from models 
 
-The script for calculating both global circumferential and global longitudinal strains of a mesh can be found in the `src/bivme/analysis` directory. Geometric strain is defined as the change in geometric arc length from ED to any other frame using a set of predefined points and calculated using the Cauchy strain formula. The global circuferential strains are calculated at three levels: apical, mid and basal. The global longitudinal strains are calculated on a 4ch and a 2ch view.
+The script for calculating both global circumferential and global longitudinal strains of a mesh can be found in the `src/bivme/analysis` directory. Geometric strain is defined as the change in geometric arc length from ED to any other frame using a set of predefined points and calculated using the Cauchy strain formula. The global circuferential strains are calculated at three levels: apical, mid and basal. The global longitudinal strains are calculated on a 4ch and a 2ch view. They are calculated and stored in fractional form (i.e. -0.1 instead of -10%).
 
 #### **Running the scripts** 
 To run the `compute_global_circumferential_strain.py` and `compute_global_longitudinal_strain.py` scripts, use the following command:
@@ -281,7 +280,7 @@ The output file will look like this:
 | **name**       | **frame** | **lv_gcs_apex** | **lv_gcs_mid** | **lv_gcs_base** | **rvfw_gcs_apex** | **rvfw_gcs_mid** | **rvfw_gcs_base** | **rvs_gcs_apex** | **rvs_gcs_mid** | **rvs_gcs_base** |
 |------------|-------|-------------|------------|-------------|----------------|---------------|----------------|---------------|--------------|---------------|
 | patient_1 | 0     | 0           | 0          | 0           | 0              | 0             | 0              | 0             | 0            | 0             |
-| patient_1 | 1     | -0.007819288	| -0.011855365	| -0.024038462	| 0.00814901	| -0.008879781	| 0.013150685 |	0.017902813	| -0.010819165	|-0.002242152
+| patient_1 | 1     | -0.006071119	| -0.00602047	| -0.022775424	| -0.002317497	| -0.005453306	| 0.015503876 |	0.002590674	| -0.00312989	|0.010297483
 
 
 
