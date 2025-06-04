@@ -1,5 +1,8 @@
 <div align="center">
 
+### 4th June, 2025: [New v1.1 deep learning models for view selection and segmentation are available!](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) 
+Refer to the [FAQs](#faqs) on how to update your models.
+
 # Biventricular modelling pipeline (biv-me)
 ![Python version](https://img.shields.io/badge/python-3.11-blue)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -11,6 +14,7 @@
 **Test Windows** [![Windows](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml)
 
 </div>
+
 
 This repository provides an end-to-end pipeline for generating guidepoint files (**GPFiles**) from CMR DICOMs, fitting biventricular models (**biv-me models**), and computing **functional cardiac metrics** such as volumes, strains, and wall thickness.
 
@@ -38,7 +42,7 @@ In a Git-enabled terminal, enter the following command to clone the repository.
 ```bash
 git clone https://github.com/UOA-Heart-Mechanics-Research/biv-me.git
 ```
-Alternatively, you can use software such as [GitHub Desktop](https://desktop.github.com/download/) or [GitKraken](https://www.gitkraken.com/) to clone the repository using the repository url.
+Alternatively, you can use software such as [GitHub Desktop](https://desktop.github.com/download/) or [GitKraken](https://www.gitkraken.com/) to clone the repository using the repository url. If you are prompted to initialise submodules within these applications after cloning the repository, **select no**. We will initialise these later.
 
 ### Step 2: Setup the virtual environment
 If you have [Anaconda](https://www.anaconda.com/docs/getting-started/anaconda/install) or [miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main), you can create the conda virtual environment by entering the following commands into your terminal (or Anaconda Command Prompt if using Windows).
@@ -75,6 +79,8 @@ If you don't have Git LFS installed, you can [follow these instructions to insta
 ```bash
 git submodule update --init
 ```
+By default, this will install the submodule associated with this version of biv-me. Refer to the [FAQs](#faqs) for more information on version control of deep learning models.
+
 You can verify that the models have been downloaded by checking that the below directories contain .pth and .joblib files that are larger than 1 KB. If they don't, refer to the troubleshooting section below.
 
     src 
@@ -226,13 +232,13 @@ The output file will look like this:
 
 | **Name**     | **Frame** | **LV Volume (lv_vol)** | **LV Mass (lvm)** | **RV Volume (rv_vol)** | **RV Mass (rvm)** | **LV Epicardial Volume (lv_epivol)** | **RV Epicardial Volume (rv_epivol)** |
 |--------------|-----------|------------------------|-------------------|------------------------|-------------------|---------------------------------------|--------------------------------------|
-| patient_1    | 0         | 174.5                  | 132.6            | 170.1                    | 54.2              | 300.8                                 | 221.7                               |
-| patient_1    | 1         | 169.4                  | 134.2            | 165.3                 | 51.8              | 297.2                                | 214.7                               |
+| patient_1    | 0         | 172.6                 | 128.5           | 172.8                    | 53.8              | 295.0                                 | 224.0                               |
+| patient_1    | 1         | 166.2                 | 129.3            | 172.4                | 54.1             | 289.3                                | 223.9                               |
 
 
 ### Calculating strains from models 
 
-The script for calculating both global circumferential and global longitudinal strains of a mesh can be found in the `src/bivme/analysis` directory. Geometric strain is defined as the change in geometric arc length from ED to any other frame using a set of predefined points and calculated using the Cauchy strain formula. The global circuferential strains are calculated at three levels: apical, mid and basal. The global longitudinal strains are calculated on a 4ch and a 2ch view.
+The script for calculating both global circumferential and global longitudinal strains of a mesh can be found in the `src/bivme/analysis` directory. Geometric strain is defined as the change in geometric arc length from ED to any other frame using a set of predefined points and calculated using the Cauchy strain formula. The global circuferential strains are calculated at three levels: apical, mid and basal. The global longitudinal strains are calculated on a 4ch and a 2ch view. They are calculated and stored in fractional form (i.e. -0.1 instead of -10%).
 
 #### **Running the scripts** 
 To run the `compute_global_circumferential_strain.py` and `compute_global_longitudinal_strain.py` scripts, use the following command:
@@ -274,7 +280,7 @@ The output file will look like this:
 | **name**       | **frame** | **lv_gcs_apex** | **lv_gcs_mid** | **lv_gcs_base** | **rvfw_gcs_apex** | **rvfw_gcs_mid** | **rvfw_gcs_base** | **rvs_gcs_apex** | **rvs_gcs_mid** | **rvs_gcs_base** |
 |------------|-------|-------------|------------|-------------|----------------|---------------|----------------|---------------|--------------|---------------|
 | patient_1 | 0     | 0           | 0          | 0           | 0              | 0             | 0              | 0             | 0            | 0             |
-| patient_1 | 1     | -0.007819288	| -0.011855365	| -0.024038462	| 0.00814901	| -0.008879781	| 0.013150685 |	0.017902813	| -0.010819165	|-0.002242152
+| patient_1 | 1     | -0.006071119	| -0.00602047	| -0.022775424	| -0.002317497	| -0.005453306	| 0.015503876 |	0.002590674	| -0.00312989	|0.010297483
 
 
 
@@ -341,6 +347,59 @@ usage: detect_intersection.py [-h] [-config CONFIG_FILE]
 | `-s SAVE_SEGMENTATION_FLAG` | Boolean flag indicating whether to save 3D masks
 
 The config file should be the one used to fit the original models. Refitted models will be saved in config["output_fitting"]["output_directory"]/corrected_models.
+
+## FAQs
+### *How often will the deep learning models be updated?*
+
+We currently intend to release new segmentation models every few months when we have a sufficient number of new cases to add to the training data. There is no easy way to communicate when models have been updated, so keep an eye on the GitHub page for any notices. When the models are updated, a new release tag will be given to biv-me that matches the release tag in the [deep learning model repository](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models), so you can keep track of each update.
+
+We are always looking for more datasets to add to our models to make them more generalisable. If you are willing to contribute some data, get in contact with us at joshua.dillon@auckland.ac.nz or charlene.1.mauger@kcl.ac.uk.
+
+### *How do I update my deep learning models?*
+
+If you have already installed biv-me and new deep learning models have been released since you installed it, you can simply pull the latest version of biv-me from the main branch...
+
+```bash
+git pull
+```
+
+...and rerun the command to install the git submodule.
+
+```bash
+git submodule update --init
+```
+
+This will update both biv-me and the deep learning models. If you would rather only update the deep learning models to the latest version without updating biv-me, you can run
+
+```bash
+git submodule update --init --remote
+```
+
+### *I have updated the deep learning models but they perform worse on my data. How do I roll back to a previous version?*
+
+If you want to access any previous version of the deep learning models, you can visit the [deep learning model repository](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) to find the tag for that version (e.g. v1.0).
+
+To roll back the models, you need to checkout the submodule at the version you want. To do so, type the following into your terminal, where 'tag' is the tag for the version of the models you want to roll back to.
+
+```bash
+cd src/bivme/preprocessing/dicom/models
+git checkout 'tag'
+```
+
+For example, if I wanted to roll back to the v1.0 models, I would enter
+
+```bash
+git checkout v1.0
+```
+
+### *This is fine, but can you generate LV only geometries?*
+
+At the moment, we don't have a direct way of generating LV only (endocardium and epicardium) models. However, it is a priority feature for development and you can expect it to be released by September 2025.
+
+### *How about the atria?*
+
+We are actively developing a four chamber fit (left ventricle, right ventricle, left atrium, and right atrium) to be released in a future version of biv-me. 
+
 
 ## Contribution - Notation
 -----------------------------------------------

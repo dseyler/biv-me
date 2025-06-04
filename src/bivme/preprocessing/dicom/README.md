@@ -32,4 +32,4 @@ Though we are confident in the robustness of our deep learning models, they may 
 
 ## Credits
 
-Special thanks are given to Sachin Govil, Brendan Lee, Yu Deng, and Ayah Elsayed for their contributions to development of the preprocessing pipeline. 
+Special thanks are given to Sachin Govil, Brendan Crabb, Yu Deng, and Ayah Elsayed for their contributions to development of the preprocessing pipeline. 
