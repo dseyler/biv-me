@@ -1,5 +1,8 @@
 <div align="center">
 
+### 6th June, 2025: v1.1.1 released with new interactive pipeline
+Find it at `src/bivme/main_interactive.ipynb`.
+
 ### 4th June, 2025: [New v1.1 deep learning models for view selection and segmentation are available!](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) 
 Refer to the [FAQs](#faqs) on how to update your models.
 
@@ -151,6 +154,9 @@ usage: main.py [-h] [-config CONFIG_FILE]
 
 To run preprocessing and/or fitting, a **config file** must be created. The config file allows you to choose which modules to run and how you would like them to be run. An example of a config file can be found in `src/bivme/configs/config.toml`. If you wish, you can create a new config file for each time you want to make changes. Just make sure to update the path of the config file when you run the code!
 
+### **Running the pipeline interactively**
+We also provide an option to run the pipeline in an interactive step-by-step manner to allow for manual correction. This pipeline is the same as the one in `main.py`, but it is structured as a Jupyter notebook instead. Open the notebook at `src/bivme/main_interactive.ipynb` to get the interactive version of biv-me started.
+
 #### **Example usage** 
 Example DICOMs are provided in `example/dicoms` and example GPFiles are provided in `example/guidepoints/default`. You can verify that the repository is working by running biv-me on this example case (called *patient1*), using the following commands.
 
@@ -158,9 +164,13 @@ Example DICOMs are provided in `example/dicoms` and example GPFiles are provided
 cd src/bivme
 python main.py -config configs/config.toml
 ```
+
 By default, this will generate new GPFiles from the DICOMs for *patient1* in `example/dicoms` (**preprocessing**), fit biv-me models to the new GPFiles created in `example/guidepoints/test` (**fitting**), and save the fitted models to the `src/output` directory. You can review the default paths by opening the config file at `src/bivme/configs/config.toml`.
 
 **If you did not configure the preprocessing in Steps 4 and 5 of the installation, you will not be able to run preprocessing**. If so, make sure to set *preprocessing=False* in the config file before running. If you turn off preprocessing, running `src/bivme/main.py` will carry out fitting only on the example GPFiles in `example/guidepoints/default`.
+
+#### **Interactive example**
+You can also run the Jupyter notebook at `src/bivme/main_interactive.ipynb` to run the same example case, which offers a chance to get more familiar with how the pipeline works. 
 
 #### **Sample output**
 Example biv-me models for *patient1* have been already fitted, and can be found in `example/fitted-models/default`. These are provided in .txt, .vtk, and .obj formats. The first frame of the fitted models in .vtk format is visualised below using [Paraview](https://www.paraview.org/). Your fitted models should ideally look something like this.

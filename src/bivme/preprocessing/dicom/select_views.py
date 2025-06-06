@@ -7,7 +7,7 @@ from bivme.preprocessing.dicom.src.viewselection import ViewSelector
 from bivme.preprocessing.dicom.src.predict_views import predict_views
 from bivme.preprocessing.dicom.src.utils import write_sliceinfofile
 
-CONFIDENCE_THRESHOLD = 0.75  # Modify this to change the confidence threshold for view selection. If metadata and image-based predictions disagree, the image-based prediction will be used if its confidence is above this threshold. 
+CONFIDENCE_THRESHOLD = 0.66  # Modify this to change the confidence threshold for view selection. If metadata and image-based predictions disagree, the image-based prediction will be used if its confidence is above this threshold. 
                             # Otherwise, the metadata-based prediction will be used.
 
 def handle_duplicates(view_predictions, viewSelector, my_logger):
