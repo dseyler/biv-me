@@ -402,6 +402,11 @@ For example, if I wanted to roll back to the v1.0 models, I would enter
 git checkout v1.0
 ```
 
+### *The code doesn't read in some or all of my images. There is nothing wrong with my images, so why might this be happening?*
+There are multiple possible explanations. One possible reason is that your DICOMs are stored in a remote server accessed by an unstable or intermitten network connection, causing dropouts and failures to read certain images.
+
+Another possibility that has been encountered is that your DICOMs have a certain type of JPEG compression that is not supported. In future, we will look to fix this specific problem. For the meantime, refer to [this link here](https://pypi.org/project/pylibjpeg/) for information on how to integrate pylibjpeg with pydicom to decompress your images.
+
 ### *This is fine, but can you generate LV only geometries?*
 
 At the moment, we don't have a direct way of generating LV only (endocardium and epicardium) models. However, it is a priority feature for development and you can expect it to be released by September 2025.
