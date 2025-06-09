@@ -6,6 +6,7 @@ import statistics
 from bivme.preprocessing.dicom.src.viewselection import ViewSelector
 from bivme.preprocessing.dicom.src.predict_views import predict_views
 from bivme.preprocessing.dicom.src.utils import write_sliceinfofile
+from bivme.preprocessing.dicom.src.viewcorrection import VSGUI
 
 CONFIDENCE_THRESHOLD = 0.66  # Modify this to change the confidence threshold for view selection. If metadata and image-based predictions disagree, the image-based prediction will be used if its confidence is above this threshold. 
                             # Otherwise, the metadata-based prediction will be used.
@@ -201,6 +202,20 @@ def select_views(patient, src, dst, model, states, option, my_logger):
 
         # Write pngs into respective view folders
         viewSelector.write_sorted_pngs()
+
+        # Corrections?
+        correct_mode = 'manual'  # Change to 'automatic' if you want to run the automatic correction mode
+
+        if correct_mode == 'manual':
+            my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
+            # Run the view correction GUI
+            gui = VSGUI(patient, dst, viewSelector)
+            gui.correct_views_gui()
+
+        elif correct_mode == 'automatic':
+            pass
+        else:
+            raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
 
     elif option == 'metadata-only':
         # Metadata-based model
