@@ -5,7 +5,7 @@ import pydicom
 INCLUSION_TERMS = [''] # include only series that have any one of these terms in the description
 EXCLUSION_TERMS = ['loc', 'molli', 't1', 't2', 'dense', 'scout', 'grid', 'flow', 'fl2d',
                    'single shot', 'report', 'document', 'segmentation', 'result', 'mapping', 'mag', 'psir', 'suiteheart',
-                   'axial', 'coronal', 'transverse', 'cas', 'survey', 'nav'] # exclude series with any one of these terms in the description
+                   'axial', 'coronal', 'transverse', 'cas', 'survey', 'nav', 'tpat', 'gad'] # exclude series with any one of these terms in the description
 
 def extract_cines(src, dst, my_logger):
     # This function is used to preprocess the DICOM files before running the pipeline. 
@@ -23,8 +23,11 @@ def extract_cines(src, dst, my_logger):
             except:
                 my_logger.warning(f'Could not read {file}. Might not be a DICOM file.')
                 continue
-
-            description = dcm.SeriesDescription.lower() # lower case for easier comparison
+            
+            try:
+                description = dcm.SeriesDescription.lower() # lower case for easier comparison
+            except:
+                my_logger.warning(f'Could not find series description tag for {file}. Excluded for now.')
 
             if any(term in description for term in INCLUSION_TERMS) and not any(term in description for term in EXCLUSION_TERMS):
                 # Save the cine images to the destination directory as .dcm files

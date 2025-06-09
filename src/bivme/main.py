@@ -136,6 +136,9 @@ if __name__ == "__main__":
 
     logger.info(f"Found {len(caselist)} cases to process.")
 
+    # Sort caselist
+    caselist.sort()
+
     for i, case in enumerate(caselist):
         logger.info(f"Processing case {i+1}/{len(caselist)}: {case}")
 
