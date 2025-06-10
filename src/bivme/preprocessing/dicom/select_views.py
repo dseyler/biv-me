@@ -72,7 +72,7 @@ def handle_duplicates(view_predictions, viewSelector, my_logger):
 
     return view_predictions
 
-def select_views(patient, src, dst, model, states, option, my_logger):
+def select_views(patient, src, dst, model, states, option, correct_mode, my_logger):
     if option == 'default':
         # Metadata-based model
         metadata_csv_path = os.path.join(dst, 'view-classification', 'metadata_view_predictions.csv')
@@ -204,13 +204,18 @@ def select_views(patient, src, dst, model, states, option, my_logger):
         viewSelector.write_sorted_pngs()
 
         # Corrections?
-        correct_mode = 'manual'  # Change to 'automatic' if you want to run the automatic correction mode
-
         if correct_mode == 'manual':
             my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
             # Run the view correction GUI
             gui = VSGUI(patient, dst, viewSelector)
             gui.correct_views_gui()
+
+            # Load the corrected predictions
+            view_predictions = pd.read_csv(csv_path)
+            viewSelector.load_predictions()
+            view_predictions.to_csv(states_path, mode='w', index=False) # Save to states path
+
+            my_logger.success('View correction complete. Predictions saved.')
 
         elif correct_mode == 'automatic':
             pass
@@ -274,6 +279,25 @@ def select_views(patient, src, dst, model, states, option, my_logger):
         # Write pngs into respective view folders
         viewSelector.write_sorted_pngs()
 
+        # Corrections?
+        if correct_mode == 'manual':
+            my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
+            # Run the view correction GUI
+            gui = VSGUI(patient, dst, viewSelector)
+            gui.correct_views_gui()
+
+            # Load the corrected predictions
+            view_predictions = pd.read_csv(csv_path)
+            viewSelector.load_predictions()
+            view_predictions.to_csv(states_path, mode='w', index=False) # Save to states path
+
+            my_logger.success('View correction complete. Predictions saved.')
+
+        elif correct_mode == 'automatic':
+            pass
+        else:
+            raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
+
     elif option == 'image-only':
         # Image-based model
         my_logger.info('Performing image-based view prediction...')
@@ -328,6 +352,25 @@ def select_views(patient, src, dst, model, states, option, my_logger):
 
         # Write pngs into respective view folders
         viewSelector.write_sorted_pngs()
+
+        # Corrections?
+        if correct_mode == 'manual':
+            my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
+            # Run the view correction GUI
+            gui = VSGUI(patient, dst, viewSelector)
+            gui.correct_views_gui()
+
+            # Load the corrected predictions
+            view_predictions = pd.read_csv(csv_path)
+            viewSelector.load_predictions()
+            view_predictions.to_csv(states_path, mode='w', index=False) # Save to states path
+
+            my_logger.success('View correction complete. Predictions saved.')
+
+        elif correct_mode == 'automatic':
+            pass
+        else:
+            raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
     
     elif option == 'load':
         my_logger.info('Loading view predictions from states folder...')
