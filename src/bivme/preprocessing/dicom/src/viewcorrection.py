@@ -6,8 +6,10 @@ from pathlib import Path
 from csv import writer
 from PIL import Image, ImageTk
 import pandas as pd
+from idlelib.tooltip import Hovertip
+import numpy as np
 
-LIST_OF_VIEWS = ['SAX', '2ch', '3ch', '4ch', 'RVOT', 'LVOT', '2ch-RT', 'RVOT-T', 'SAX-atria', 'OTHER']
+LIST_OF_VIEWS = ['SAX', '2ch', '3ch', '4ch', 'RVOT', 'LVOT', '2ch-RT', 'RVOT-T', 'SAX-atria', 'OTHER', 'Excluded']
 
 class VSGUI:
     def __init__(self, patient, dst, viewSelector):
@@ -23,14 +25,17 @@ class VSGUI:
         unique_series = self.view_predictions['Series Number'].unique()
         unique_series = sorted(unique_series, key=lambda x: int(x))  # Sort series numbers numerically
 
-        self.num_rows = 6*2 + 1 # Doubled to allow for buttons above each image
+        self.num_rows = 6*2 + 2 # Doubled to allow for buttons above each image
         self.num_cols = 8
         self.gridlayout = {}
-        for i in range(0, self.num_rows):
+
+        for i in range(self.num_rows):
             for j in range(self.num_cols):
                 # Only put images on odd rows
-                self.gridlayout[i * self.num_cols + j] = (i+2, j) if i % 2 == 0 else (i+3, j)  # Even rows for images, odd rows for menus
-                
+                self.gridlayout[i * self.num_cols + j] = (2*i+2, j)
+                # print(f"Grid position for {i * self.num_cols + j}: {(2*i+2, j)}")
+        
+        print(self.gridlayout)
         # Create a grid layout for the window, with num_rows and num_cols
         self.series_mapping = {}
 
@@ -109,6 +114,8 @@ class VSGUI:
             btn_image = tk.Label(master=self.window, image = image_tk, relief=tk.RAISED)
             btn_image.anchor(tk.CENTER)
             btn_image.grid(row=self.gridlayout[mapped_series][0], column=self.gridlayout[mapped_series][1])
+
+            Hovertip(btn_image, f'Series {series}')
 
             # Display drop down with list of different views
             # Populate with current view
