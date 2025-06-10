@@ -35,7 +35,6 @@ class VSGUI:
                 self.gridlayout[i * self.num_cols + j] = (2*i+2, j)
                 # print(f"Grid position for {i * self.num_cols + j}: {(2*i+2, j)}")
         
-        print(self.gridlayout)
         # Create a grid layout for the window, with num_rows and num_cols
         self.series_mapping = {}
 
