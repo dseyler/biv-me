@@ -8,7 +8,7 @@ import PIL.Image as Image
 from pathlib import Path
 
 class ViewSelector:
-    def __init__(self, src, dst, model, type, csv_path, my_logger):
+    def __init__(self, src, dst, model, type, csv_path, show_warnings, my_logger):
         self.src = src
         self.dst = dst
         self.model = model
@@ -18,6 +18,7 @@ class ViewSelector:
         self.sorted_dict = {}
         self.csv_path = csv_path
         self.my_logger = my_logger
+        self.show_warnings = show_warnings
 
     def load_predictions(self):
         self.prepare_data_for_prediction()
@@ -187,7 +188,8 @@ class ViewSelector:
             series_rows = self.df.loc[(self.df['Series Number'] == series)]
 
             if len(series_rows) < 10: # unlikely to be a cine
-                self.my_logger.warning(f"Removing series {series} - less than 10 frames")
+                if self.show_warnings:
+                    self.my_logger.warning(f"Removing series {series} - less than 10 frames")
                 continue
 
             all_img_positions = series_rows['Image Position Patient'].values
@@ -217,7 +219,8 @@ class ViewSelector:
                     series_num = max_series_num + i + 1 # New series number ('fake' series number)
 
                     if len(series_rows_split) < 10: # unlikely to be a cine
-                        self.my_logger.warning(f"Removing series {series_num} - less than 10 frames")
+                        if self.show_warnings:
+                            self.my_logger.warning(f"Removing series {series_num} - less than 10 frames")
                         continue
 
                     img = np.stack(series_rows_split['Img'].values, axis=0)
@@ -227,9 +230,11 @@ class ViewSelector:
                     image_position_patient = series_rows_split['Image Position Patient'].values[0]
                     image_orientation_patient = series_rows_split['Image Orientation Patient'].values[0]
                     pixel_spacing = series_rows_split['Pixel Spacing'].values[0]
+                    slice_location = series_rows_split['Slice Location'].values[0]
 
                     # Add to output
-                    output.append([patient_id, filename, modality, series_instance_uid, series_num, image_position_patient, image_orientation_patient, pixel_spacing, img, num_phases, series_description])
+                    output.append([patient_id, filename, modality, series_instance_uid, series_num, image_position_patient, image_orientation_patient, pixel_spacing, 
+                                   slice_location, img, num_phases, series_description])
 
                     if self.type == "metadata":
                         key = f'{series_num}_{image_position_patient[2]}'
@@ -256,9 +261,11 @@ class ViewSelector:
                 image_position_patient = series_rows['Image Position Patient'].values[0]
                 image_orientation_patient = series_rows['Image Orientation Patient'].values[0]
                 pixel_spacing = series_rows['Pixel Spacing'].values[0]
+                slice_location = series_rows['Slice Location'].values[0]
 
                 # Add to output
-                output.append([patient_id, filename, modality, series_instance_uid, series, image_position_patient, image_orientation_patient, pixel_spacing, img, num_phases, series_description])
+                output.append([patient_id, filename, modality, series_instance_uid, series, image_position_patient, image_orientation_patient, pixel_spacing, 
+                               slice_location, img, num_phases, series_description])
 
                 if self.type == "metadata":
                     key = f'{series_rows["Series Number"].values[0]}_{image_position_patient[2]}'
@@ -282,6 +289,7 @@ class ViewSelector:
                                             'Image Position Patient',
                                             'Image Orientation Patient',
                                             'Pixel Spacing', 
+                                            'Slice Location',
                                             'Img',
                                             'Frames Per Slice',
                                             'Series Description'])

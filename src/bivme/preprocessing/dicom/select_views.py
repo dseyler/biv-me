@@ -72,19 +72,30 @@ def handle_duplicates(view_predictions, viewSelector, my_logger):
 
     return view_predictions
 
+def correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger):
+    gui = VSGUI(patient, dst, viewSelector, my_logger)
+    gui.correct_views_gui()
+
+    # Load the corrected predictions
+    view_predictions = pd.read_csv(csv_path)
+    viewSelector.load_predictions()
+    view_predictions.to_csv(states_path, mode='w', index=False) # Save to states path
+
+    my_logger.success('View correction complete. Predictions saved.')
+
 def select_views(patient, src, dst, model, states, option, correct_mode, my_logger):
     if option == 'default':
         # Metadata-based model
         metadata_csv_path = os.path.join(dst, 'view-classification', 'metadata_view_predictions.csv')
         my_logger.info('Performing metadata-based view prediction...')
-        viewSelectorMetadata = ViewSelector(src, dst, model, type='metadata', csv_path=metadata_csv_path, my_logger=my_logger)
+        viewSelectorMetadata = ViewSelector(src, dst, model, type='metadata', csv_path=metadata_csv_path, show_warnings=True, my_logger=my_logger)
         predict_views(viewSelectorMetadata)
         my_logger.success('Metadata-based view prediction complete.')
 
         # Image-based model
         my_logger.info('Performing image-based view prediction...')
         image_csv_path = os.path.join(dst, 'view-classification', 'image_view_predictions.csv')
-        viewSelectorImage = ViewSelector(src, dst, model, type='image', csv_path=image_csv_path, my_logger=my_logger)
+        viewSelectorImage = ViewSelector(src, dst, model, type='image', csv_path=image_csv_path, show_warnings=False, my_logger=my_logger)
         predict_views(viewSelectorImage)
         my_logger.success('Image-based view prediction complete.')
 
@@ -207,15 +218,37 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
         if correct_mode == 'manual':
             my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
             # Run the view correction GUI
-            gui = VSGUI(patient, dst, viewSelector, my_logger)
-            gui.correct_views_gui()
+            correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            # Load the corrected predictions
-            view_predictions = pd.read_csv(csv_path)
-            viewSelector.load_predictions()
-            view_predictions.to_csv(states_path, mode='w', index=False) # Save to states path
+        elif correct_mode == 'adaptive':
+            my_logger.info('Adaptive corrections mode enabled. Checking for missing/bad predictions...')
+            
+            # Check if there are missing views
+            all_views = view_predictions['Predicted View'].unique()
+            views_missing = []
+            if not '2ch' in all_views:
+                views_missing.append('2ch')
+            if not '3ch' in all_views:
+                views_missing.append('3ch')
+            if not '4ch' in all_views:
+                views_missing.append('4ch')
+            if not 'SAX' in all_views:
+                views_missing.append('SAX')
+            
+            if len(views_missing) > 0:
+                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                # Run the view correction GUI
+                correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            my_logger.success('View correction complete. Predictions saved.')
+            else:
+                # Check for any predictions with low confidence 
+                low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
+                if len(low_confidence) > 0:
+                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    # Run the view correction GUI
+                    correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
+                else:
+                    my_logger.success('No missing views or low confidence predictions found. No corrections needed (hopefully).')
 
         elif correct_mode == 'automatic':
             pass
@@ -226,7 +259,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
         # Metadata-based model
         csv_path = os.path.join(dst, 'view-classification', 'view_predictions.csv')
         my_logger.info('Performing metadata-based view prediction...')
-        viewSelector = ViewSelector(src, dst, model, type='metadata', csv_path=csv_path, my_logger=my_logger)
+        viewSelector = ViewSelector(src, dst, model, type='metadata', csv_path=csv_path, show_warnings=True, my_logger=my_logger)
         predict_views(viewSelector)
         my_logger.success('Metadata-based view prediction complete.')
 
@@ -283,26 +316,48 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
         if correct_mode == 'manual':
             my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
             # Run the view correction GUI
-            gui = VSGUI(patient, dst, viewSelector, my_logger)
-            gui.correct_views_gui()
+            correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            # Load the corrected predictions
-            view_predictions = pd.read_csv(csv_path)
-            viewSelector.load_predictions()
-            view_predictions.to_csv(states_path, mode='w', index=False) # Save to states path
+        elif correct_mode == 'adaptive':
+            my_logger.info('Adaptive corrections mode enabled. Checking for missing/bad predictions...')
+            
+            # Check if there are missing views
+            all_views = view_predictions['Predicted View'].unique()
+            views_missing = []
+            if not '2ch' in all_views:
+                views_missing.append('2ch')
+            if not '3ch' in all_views:
+                views_missing.append('3ch')
+            if not '4ch' in all_views:
+                views_missing.append('4ch')
+            if not 'SAX' in all_views:
+                views_missing.append('SAX')
+            
+            if len(views_missing) > 0:
+                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                # Run the view correction GUI
+                correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            my_logger.success('View correction complete. Predictions saved.')
+            else:
+                # Check for any predictions with low confidence 
+                low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
+                if len(low_confidence) > 0:
+                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    # Run the view correction GUI
+                    correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
+                else:
+                    my_logger.success('No missing views or low confidence predictions found. No corrections needed (hopefully).')
 
         elif correct_mode == 'automatic':
             pass
         else:
-            raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
+            raise ValueError('Invalid correction mode. Please use "manual", "adaptive", or "automatic".')
 
     elif option == 'image-only':
         # Image-based model
         my_logger.info('Performing image-based view prediction...')
         csv_path = os.path.join(dst, 'view-classification', 'view_predictions.csv')
-        viewSelector = ViewSelector(src, dst, model, type='image', csv_path=csv_path, my_logger=my_logger)
+        viewSelector = ViewSelector(src, dst, model, type='image', csv_path=csv_path, show_warnings=True, my_logger=my_logger)
         predict_views(viewSelector)
         my_logger.success('Image-based view prediction complete.')
 
@@ -357,20 +412,42 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
         if correct_mode == 'manual':
             my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
             # Run the view correction GUI
-            gui = VSGUI(patient, dst, viewSelector, my_logger)
-            gui.correct_views_gui()
+            correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            # Load the corrected predictions
-            view_predictions = pd.read_csv(csv_path)
-            viewSelector.load_predictions()
-            view_predictions.to_csv(states_path, mode='w', index=False) # Save to states path
+        elif correct_mode == 'adaptive':
+            my_logger.info('Adaptive corrections mode enabled. Checking for missing/bad predictions...')
+            
+            # Check if there are missing views
+            all_views = view_predictions['Predicted View'].unique()
+            views_missing = []
+            if not '2ch' in all_views:
+                views_missing.append('2ch')
+            if not '3ch' in all_views:
+                views_missing.append('3ch')
+            if not '4ch' in all_views:
+                views_missing.append('4ch')
+            if not 'SAX' in all_views:
+                views_missing.append('SAX')
+            
+            if len(views_missing) > 0:
+                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                # Run the view correction GUI
+                correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            my_logger.success('View correction complete. Predictions saved.')
+            else:
+                # Check for any predictions with low confidence 
+                low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
+                if len(low_confidence) > 0:
+                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    # Run the view correction GUI
+                    correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
+                else:
+                    my_logger.success('No missing views or low confidence predictions found. No corrections needed (hopefully).')
 
         elif correct_mode == 'automatic':
             pass
         else:
-            raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
+            raise ValueError('Invalid correction mode. Please use "manual", "adaptive", or "automatic".')
     
     elif option == 'load':
         my_logger.info('Loading view predictions from states folder...')
@@ -382,7 +459,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
         
         view_predictions = pd.read_csv(csv_path)
 
-        viewSelector = ViewSelector(src, dst, model, type='image', csv_path=csv_path, my_logger=my_logger)
+        viewSelector = ViewSelector(src, dst, model, type='image', csv_path=csv_path, show_warnings=True, my_logger=my_logger)
         viewSelector.load_predictions()
 
         ## Flag any slices with non-matching number of phases
@@ -403,27 +480,50 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             my_logger.info(f'{view}: {len(view_predictions[view_predictions["Predicted View"] == view])} series')
 
         # Write csv to dst
-        view_predictions.to_csv(os.path.join(dst, 'view-classification', 'view_predictions.csv'), mode='w', index=False)
+        csv_path = os.path.join(dst, 'view-classification', 'view_predictions.csv')
+        states_path = os.path.join(states, 'view_predictions.csv')
+        view_predictions.to_csv(csv_path, mode='w', index=False)
 
         # Corrections?
         if correct_mode == 'manual':
             my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
             # Run the view correction GUI
-            gui = VSGUI(patient, dst, viewSelector, my_logger)
-            gui.correct_views_gui()
+            correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            # Load the corrected predictions
-            view_predictions = pd.read_csv(csv_path)
-            viewSelector.load_predictions()
-            view_predictions.to_csv(csv_path, mode='w', index=False) # Save to states path
-            view_predictions.to_csv(os.path.join(dst, 'view-classification', 'view_predictions.csv'), mode='w', index=False) # Save to dst path
+        elif correct_mode == 'adaptive':
+            my_logger.info('Adaptive corrections mode enabled. Checking for missing/bad predictions...')
+            
+            # Check if there are missing views
+            all_views = view_predictions['Predicted View'].unique()
+            views_missing = []
+            if not '2ch' in all_views:
+                views_missing.append('2ch')
+            if not '3ch' in all_views:
+                views_missing.append('3ch')
+            if not '4ch' in all_views:
+                views_missing.append('4ch')
+            if not 'SAX' in all_views:
+                views_missing.append('SAX')
+            
+            if len(views_missing) > 0:
+                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                # Run the view correction GUI
+                correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
-            my_logger.success('View correction complete. Predictions saved.')
+            else:
+                # Check for any predictions with low confidence 
+                low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
+                if len(low_confidence) > 0:
+                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    # Run the view correction GUI
+                    correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
+                else:
+                    my_logger.success('No missing views or low confidence predictions found. No corrections needed (hopefully).')
 
         elif correct_mode == 'automatic':
             pass
         else:
-            raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
+            raise ValueError('Invalid correction mode. Please use "manual", "adaptive", or "automatic".')
 
     else:
         raise ValueError('Invalid option. Please use "default", "metadata-only", "image-only", or "load".')

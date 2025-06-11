@@ -82,6 +82,7 @@ class VSGUI:
         all_imgs = [os.path.join(unsorted_img_directory, i) for i in all_imgs if i.endswith('_0.png')]
 
         stringvars = []
+        confidences = []
         self.series = []
 
         for i in all_imgs:
@@ -90,10 +91,12 @@ class VSGUI:
             # Get view classification
             vp = self.view_predictions[self.view_predictions['Series Number'] == series]
             view = vp['Predicted View'].values[0]
-            self.img_dict[i] = view
 
             stringvars.append(StringVar(master=self.window, value=view))  # Create a StringVar for each image view class
             self.series.append(series)
+
+            confidence = vp['Confidence'].values[0]
+            confidences.append(confidence)
 
         self.list_of_images = []
         self.list_of_dropdowns = []
@@ -109,12 +112,20 @@ class VSGUI:
 
             series = int(os.path.basename(img).split('_')[0])
             mapped_series = self.series_mapping[series]
+            
+            confidence = confidences[i]
+            if confidence < 0.66:
+                color = 'red'
+            else:
+                color = 'green'
 
-            btn_image = tk.Label(master=self.window, image = image_tk, relief=tk.RAISED)
-            btn_image.anchor(tk.CENTER)
-            btn_image.grid(row=self.gridlayout[mapped_series][0], column=self.gridlayout[mapped_series][1])
+            # Create a label with the image
+            lbl_image = tk.Label(master=self.window, image = image_tk, highlightcolor=color, highlightbackground=color,
+                                  highlightthickness=1, relief=tk.RAISED)
+            lbl_image.anchor(tk.CENTER)
+            lbl_image.grid(row=self.gridlayout[mapped_series][0], column=self.gridlayout[mapped_series][1])
 
-            Hovertip(btn_image, f'Series {series}')
+            Hovertip(lbl_image, f'Series {series}, Confidence: {confidences[i]:.2f}')
 
             # Display drop down with list of different views
             # Populate with current view

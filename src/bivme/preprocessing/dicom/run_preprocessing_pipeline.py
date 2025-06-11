@@ -74,7 +74,7 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.success(f'Pre-preprocessing complete. Cines extracted to {src}.')
 
     ## Step 1: View selection
-    correct_mode = 'automatic' # 'automatic' or 'manual'. default is 'automatic' for the terminal based pipeline
+    correct_mode = 'adaptive' # 'automatic', 'adaptive', or 'manual'. default is 'adaptive' for the terminal based pipeline
     slice_info_df, num_phases, slice_mapping = select_views(case, src, dst, MODEL_DIR, states, config["view-selection"]["option"], correct_mode, mylogger)
 
     mylogger.success(f'View selection complete.')
