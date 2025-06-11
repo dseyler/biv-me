@@ -253,7 +253,7 @@ def contour_RVOT(segmentation):
     # Get intersection points between RV myo and RV endo to separate free wall from septal wall
     if len(RV_endo_pts)>0 and len(RV_myo_pts)>0:
 
-        pairs = get_intersections(RV_endo_pts, RV_myo_pts, distance_cutoff = 3)
+        pairs = get_intersections(RV_endo_pts, RV_myo_pts, distance_cutoff = 5) # Relatively large cutoff because of tendency for RV myo to break
 
         if len(pairs) > 0:
             RV_fw_pts = np.array([pnt.tolist() for i, pnt in enumerate(RV_endo_pts) if i in np.unique(pairs[:,0])], 
