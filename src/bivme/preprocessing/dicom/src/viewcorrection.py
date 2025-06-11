@@ -12,12 +12,13 @@ import numpy as np
 LIST_OF_VIEWS = ['SAX', '2ch', '3ch', '4ch', 'RVOT', 'LVOT', '2ch-RT', 'RVOT-T', 'SAX-atria', 'OTHER', 'Excluded']
 
 class VSGUI:
-    def __init__(self, patient, dst, viewSelector):
+    def __init__(self, patient, dst, viewSelector, my_logger):
         self.patient = patient
         self.dst = dst
         self.view_predictions = pd.read_csv(viewSelector.csv_path)
         self.img_dict = {}
         self.viewSelector = viewSelector
+        self.my_logger = my_logger
         self.create_window()
 
     def create_window(self):
@@ -33,8 +34,7 @@ class VSGUI:
             for j in range(self.num_cols):
                 # Only put images on odd rows
                 self.gridlayout[i * self.num_cols + j] = (2*i+2, j)
-                # print(f"Grid position for {i * self.num_cols + j}: {(2*i+2, j)}")
-        
+
         # Create a grid layout for the window, with num_rows and num_cols
         self.series_mapping = {}
 
@@ -49,7 +49,7 @@ class VSGUI:
 
     # This function saves the corrected predictions to the processing and states directories
     def save_corrections(self):
-        print("----- Saving view predictions...")
+        self.my_logger.info("----- Saving view predictions...")
         # Get selected option from the drop down menu
         for i, dropdown in enumerate(self.list_of_dropdowns):
             selected_view = dropdown.get()
@@ -58,7 +58,7 @@ class VSGUI:
             self.img_dict[img] = selected_view
             self.view_predictions.loc[self.view_predictions['Series Number'] == series, 'Predicted View'] = selected_view
 
-            print(f"----- Saving view {selected_view} for series {series}")
+            self.my_logger.info(f"----- Series {series} corrected to {selected_view}.")
 
         # Save the corrected predictions to the CSV file
         self.view_predictions.to_csv(self.viewSelector.csv_path, index=False)
@@ -66,7 +66,7 @@ class VSGUI:
         # Add text confirmation to the header
         lbl_confirmation = tk.Label(master=self.window, text="View predictions saved successfully!", fg="green")
         lbl_confirmation.grid(row=0, column=5, sticky=tk.W + tk.E)
-        print("----- View predictions saved successfully! You can safely close the window and continue.")
+        self.my_logger.success("----- View predictions saved successfully. Close the window to continue.")
 
     def correct_views_gui(self):
         # Initialise save button at the top
@@ -121,5 +121,4 @@ class VSGUI:
             self.list_of_dropdowns.append(ttk.Combobox(self.window, values=LIST_OF_VIEWS, textvariable=stringvars[i], state="readonly"))
             self.list_of_dropdowns[-1].grid(row=self.gridlayout[mapped_series][0]-1, column=self.gridlayout[mapped_series][1])
 
-        print(f"----- All images loaded.\n")
         self.window.mainloop()
