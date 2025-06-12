@@ -6,7 +6,7 @@ INCLUSION_TERMS = [''] # include only series that have any one of these terms in
 EXCLUSION_TERMS = ['loc', 'molli', 't1', 't2', 'dense', 'scout', 'grid', 'flow', 'fl2d',
                    'single shot', 'report', 'document', 'segmentation', 'result', 'mapping', 'mag', 'psir', 'suiteheart',
                    'axial', 'coronal', 'transverse', 'cas', 'survey', 'nav', 'tpat', 't-pat', 'gad',
-                   'cs_rt_10sl_jc', 'truefisp', 'catch', 'fl3d', 'exceptions'] # exclude series with any one of these terms in the description
+                   'cs_rt_10sl_jc', 'truefisp', 'catch', 'fl3d', 'exceptions', 'haste', 'oblique'] # exclude series with any one of these terms in the description
 
 def extract_cines(src, dst, my_logger):
     # This function is used to preprocess the DICOM files before running the pipeline. 

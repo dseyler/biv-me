@@ -27,7 +27,7 @@ class VSGUI:
         unique_series = sorted(unique_series, key=lambda x: int(x))  # Sort series numbers numerically
 
         self.num_rows = 6*2 + 2 # Doubled to allow for buttons above each image
-        self.num_cols = 8
+        self.num_cols = 9
         self.gridlayout = {}
 
         for i in range(self.num_rows):

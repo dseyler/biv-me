@@ -261,7 +261,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             pass
         else:
             raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
-
+        
     elif option == 'metadata-only':
         # Metadata-based model
         csv_path = os.path.join(dst, 'view-classification', 'view_predictions.csv')
@@ -359,6 +359,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             pass
         else:
             raise ValueError('Invalid correction mode. Please use "manual", "adaptive", or "automatic".')
+        
 
     elif option == 'image-only':
         # Image-based model
@@ -534,6 +535,13 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
 
     else:
         raise ValueError('Invalid option. Please use "default", "metadata-only", "image-only", or "load".')
+    
+    # Recalculate after correection
+    try:
+        sax_series = view_predictions[view_predictions['Predicted View'] == 'SAX'] 
+        num_phases = statistics.mode(sax_series['Frames Per Slice'].values)
+    except statistics.StatisticsError: # If no mode found (i.e. two values with equally similar counts), use median
+        num_phases = np.median(sax_series['Frames Per Slice'].values)
 
     out = []
     for i, row in view_predictions.iterrows():

@@ -141,7 +141,8 @@ class ViewSelector:
         try:
             array = ds.pixel_array
         except:
-            self.my_logger.warning(f"Could not load image data for {dicom_loc}. Might not contain an image.")
+            if self.show_warnings:
+                self.my_logger.warning(f"Could not load image data for {dicom_loc}. Might not contain an image.")
             array = None
 
         return patient_id, dicom_loc, modality, instance_number, series_instance_uid, series_number , tuple(image_position_patient), image_orientation_patient, pixel_spacing, echo_time, repetition_time, trigger_time, image_dimension, slice_thickness, array, slice_location, series_description
