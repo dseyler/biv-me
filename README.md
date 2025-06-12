@@ -1,7 +1,7 @@
 <div align="center">
 
 ### 13th June, 2025: v1.1.3 released with view correction GUI
-We have added an option to interactively correct view predictions during preprocessing. Check out the new config file structure at `src/bivme/configs/config.toml` for the new options that are available under view selection.
+We have added a GUI for interactively correcting view predictions during preprocessing. Check out the new config file structure at `src/bivme/configs/config.toml` for the new options available for view selection.
 
 ### 4th June, 2025: [New v1.1 deep learning models for view selection and segmentation are available!](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) 
 Refer to the [FAQs](#faqs) on how to update your models.
@@ -17,7 +17,6 @@ Refer to the [FAQs](#faqs) on how to update your models.
 **Test Windows** [![Windows](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml/badge.svg)](https://github.com/UOA-Heart-Mechanics-Research/biv-me/actions/workflows/windows.yml)
 
 </div>
-
 
 This repository provides an end-to-end pipeline for generating guidepoint files (**GPFiles**) from CMR DICOMs, fitting biventricular models (**biv-me models**), and computing **functional cardiac metrics** such as volumes, strains, and wall thickness.
 
