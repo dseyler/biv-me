@@ -1,7 +1,7 @@
 <div align="center">
 
-### 6th June, 2025: v1.1.1 released with new interactive pipeline
-Find it at `src/bivme/main_interactive.ipynb`.
+### 13th June, 2025: v1.1.3 released with view correction GUI
+We have added an option to interactively correct view predictions during preprocessing. Check out the new config file structure at `src/bivme/configs/config.toml` for the new options that are available under view selection.
 
 ### 4th June, 2025: [New v1.1 deep learning models for view selection and segmentation are available!](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) 
 Refer to the [FAQs](#faqs) on how to update your models.
@@ -23,11 +23,11 @@ This repository provides an end-to-end pipeline for generating guidepoint files 
 
 Example data is available in the `example/` folder, including input DICOMs, GPFiles, and fitted models for testing and reference.
 
-For a detailed description of the end-to-end image to mesh pipeline, including image preprocessing and biventricular model fitting, please refer to:
-**Dillon JR, Mauger C, Zhao D, Deng Y, Petersen SE, McCulloch AD, Young AA, Nash MP. An open-source end-to-end pipeline for generating 3D+t biventricular meshes from cardiac magnetic resonance imaging. In: Functional Imaging and Modeling of the Heart (FIMH) 2025. (in press)**
+For a detailed description of the end-to-end image to mesh pipeline, including image preprocessing and biventricular model fitting, please refer to: <blockquote> Dillon, J.R., Mauger, C., Zhao, D., Deng, Y., Petersen, S.E., McCulloch, A.D., Young, A.A., & Nash, M.P. An open-source end-to-end pipeline for generating 3D+t biventricular meshes from cardiac magnetic resonance imaging. In: Functional Imaging and Modeling of the Heart (FIMH) 2025 (pp. 372-383). LNCS 15673.  [DOI:10.1007/978-3-031-94562-5_34](https://doi.org/10.1007/978-3-031-94562-5_34) </blockquote>
 
-For a detailed description regarding the fitting of the biventricular model, please refer to:
-**Mauger, C., Gilbert, K., Suinesiaputra, A., Pontre, B., Omens, J., McCulloch, A., & Young, A. (2018, July). An iterative diffeomorphic algorithm for registration of subdivision surfaces: application to congenital heart disease. In 2018 40th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC) (pp. 596-599). IEEE.** [DOI: 10.1109/EMBC.2018.8512394](https://doi.org/10.1109/EMBC.2018.8512394)
+For a detailed description regarding the fitting of the biventricular model, please refer to: <blockquote>Mauger, C., Gilbert, K., Suinesiaputra, A., Pontre, B., Omens, J., McCulloch, A., & Young, A. (2018, July). An iterative diffeomorphic algorithm for registration of subdivision surfaces: application to congenital heart disease. In 2018 40th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC) (pp. 596-599). IEEE. [DOI: 10.1109/EMBC.2018.8512394](https://doi.org/10.1109/EMBC.2018.8512394)</blockquote>
+
+Depending on how you use biv-me, please cite the relevant publication(s) above.  
 
 CMR DICOMs           | Contours                   |        biv-me models                |
 :-------------------------:|:-------------------------:|:-------------------------:|
