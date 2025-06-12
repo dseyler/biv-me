@@ -238,7 +238,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 views_missing.append('SAX')
             
             if len(views_missing) > 0:
-                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                my_logger.warning(f'Views {views_missing} are missing from the predictions.  Launching view correction GUI...')
                 # Run the view correction GUI
                 view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
@@ -246,7 +246,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 # Check for any predictions with low confidence 
                 low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
                 if len(low_confidence) > 0:
-                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    my_logger.warning(f'Found predictions with low confidence.  Launching view correction GUI...')
                     # Run the view correction GUI
                     view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
                 else:
@@ -336,7 +336,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 views_missing.append('SAX')
             
             if len(views_missing) > 0:
-                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                my_logger.warning(f'Views {views_missing} are missing from the predictions.  Launching view correction GUI...')
                 # Run the view correction GUI
                 view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
@@ -344,7 +344,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 # Check for any predictions with low confidence 
                 low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
                 if len(low_confidence) > 0:
-                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    my_logger.warning(f'Found predictions with low confidence.  Launching view correction GUI...')
                     # Run the view correction GUI
                     view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
                 else:
@@ -432,7 +432,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 views_missing.append('SAX')
             
             if len(views_missing) > 0:
-                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                my_logger.warning(f'Views {views_missing} are missing from the predictions.  Launching view correction GUI...')
                 # Run the view correction GUI
                 view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
@@ -440,7 +440,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 # Check for any predictions with low confidence 
                 low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
                 if len(low_confidence) > 0:
-                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    my_logger.warning(f'Found predictions with low confidence.  Launching view correction GUI...')
                     # Run the view correction GUI
                     view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
                 else:
@@ -508,7 +508,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 views_missing.append('SAX')
             
             if len(views_missing) > 0:
-                my_logger.warning(f'Views {views_missing} are missing from the predictions. Running adaptive correction...')
+                my_logger.warning(f'Views {views_missing} are missing from the predictions.  Launching view correction GUI...')
                 # Run the view correction GUI
                 view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
 
@@ -516,7 +516,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 # Check for any predictions with low confidence 
                 low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
                 if len(low_confidence) > 0:
-                    my_logger.warning(f'Found predictions with low confidence. Running adaptive correction...')
+                    my_logger.warning(f'Found predictions with low confidence.  Launching view correction GUI...')
                     # Run the view correction GUI
                     view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
                 else:
