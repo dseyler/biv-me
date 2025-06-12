@@ -404,7 +404,7 @@ git checkout v1.0
 ### *The code doesn't read in some or all of my images. There is nothing wrong with my images, so why might this be happening?*
 There are multiple possible explanations. One possible reason is that your DICOMs are stored in a remote server accessed by an unstable or intermitten network connection, causing dropouts and failures to read certain images.
 
-Another possibility that has been encountered is that your DICOMs have a certain type of JPEG compression that is not supported. In future, we will look to fix this specific problem. For the meantime, refer to [this link here](https://pypi.org/project/pylibjpeg/) for information on how to integrate pylibjpeg with pydicom to decompress your images.
+Another possibility that has been encountered is that your DICOMs have a certain type of image compression that is not supported. We have encountered this problem in the past and each time have made adjustments to allow biv-me to run. However, we have not seen every possible form of image compression. If you think this problem might be occurring with your data, reach out to us with an example and we will be happy to look into it.
 
 ### *This is fine, but can you generate LV only geometries?*
 
