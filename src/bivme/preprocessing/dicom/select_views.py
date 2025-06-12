@@ -15,7 +15,7 @@ def handle_duplicates(view_predictions, viewSelector, my_logger):
     ## Remove duplicates
     # Type 1 - Same location, different series
     slice_locations = [] # Only consider slices not already excluded
-    idx = []
+    indices = []
     # Loop over view predictions
     for i, row in view_predictions.iterrows():
         if row['Predicted View'] == 'Excluded':
@@ -23,31 +23,36 @@ def handle_duplicates(view_predictions, viewSelector, my_logger):
         slice_locations.append(viewSelector.df[viewSelector.df['Series Number'] == row['Series Number']]['Image Position Patient'].values[0])
         # Index should be the same as the row index in viewSelector.df
         index = viewSelector.df[viewSelector.df['Series Number'] == row['Series Number']].index[0]
-        idx.append(index)
+        indices.append(index)
 
     repeated_slice_locations = [x for x in slice_locations if slice_locations.count(x) > 1]
-    idx = [index for i,index in enumerate(idx) if slice_locations[i] in repeated_slice_locations]
+    repeated_slice_locations = list(set(repeated_slice_locations))  # Convert to unique set
 
-    # Find repeated slice locations
-    if len(idx) == 0:
-        # my_logger.info('No duplicate slice locations found.')
-        pass
-    else:
-        repeated_series = viewSelector.df.iloc[idx]
-        repeated_series_num = repeated_series['Series Number'].values
-        # Order by series number, so that if that if two series have the same Confidence, the higher series number is retained
-        repeated_series_num = sorted(repeated_series_num, reverse=True)
-        repeated_series_num = np.array(repeated_series_num)
+    for repeated_slice_location in repeated_slice_locations:
+        idx = [index for i,index in enumerate(indices) if slice_locations[i] == repeated_slice_location]
 
-        # Retain only the series with the highest Confidence, convert the rest to 'Excluded'
-        confidences = [view_predictions[view_predictions['Series Number'] == x]['Confidence'].values[0] for x in repeated_series_num]
+        # Find repeated slice locations
+        if len(idx) == 0:
+            # my_logger.info('No duplicate slice locations found.')
+            pass
+        else:
+            repeated_series = viewSelector.df.iloc[idx]
+            repeated_series_num = repeated_series['Series Number'].values
+            # Order by series number, so that if that if two series have the same Confidence, the higher series number is retained
+            repeated_series_num = sorted(repeated_series_num, reverse=True)
+            repeated_series_num = np.array(repeated_series_num)
 
-        idx_max = np.argmax(confidences)
-        idx_to_exclude = [i for i in range(len(repeated_series_num)) if i != idx_max]
+            # Retain only the series with the highest Confidence, convert the rest to 'Excluded'
+            confidences = [view_predictions[view_predictions['Series Number'] == x]['Confidence'].values[0] for x in repeated_series_num]
 
-        view_predictions.loc[view_predictions['Series Number'].isin(repeated_series_num[idx_to_exclude]), 'Predicted View'] = 'Excluded'
+            idx_max = np.argmax(confidences)
+            idx_to_exclude = [i for i in range(len(repeated_series_num)) if i != idx_max]
 
-        my_logger.info(f'Excluded series {repeated_series_num[idx_to_exclude]} as they exist at the same slice location as another series.') # TODO: Log which series
+            view_predictions.loc[view_predictions['Series Number'].isin(repeated_series_num[idx_to_exclude]), 'Predicted View'] = 'Excluded'
+
+            kept_series_num = repeated_series_num[idx_max]
+
+            my_logger.info(f'Excluded series {repeated_series_num[idx_to_exclude]} as they exist at the same slice location as another series ({kept_series_num}).') # TODO: Log which series
 
     # Type 2 - Multiple series classed as the same 'exclusive' view (i.e. 2ch, 3ch, 4ch, RVOT, RVOT-T, 2ch-RT, LVOT) 
     # i.e. a view that should only have one series 
