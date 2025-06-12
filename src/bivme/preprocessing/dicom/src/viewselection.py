@@ -119,7 +119,7 @@ class ViewSelector:
         pixel_spacing = ds.get("PixelSpacing", 'NA')
         echo_time = ds.get("EchoTime", 'NA')
         repetition_time = ds.get("RepetitionTime", 'NA')
-        trigger_time = float(ds.get('TriggerTime', 'NA'))
+        trigger_time = ds.get('TriggerTime', 'NA')
         image_dimension = [ds.get('Rows', 'NA'), ds.get('Columns', 'NA')]
         slice_thickness = ds.get('SliceThickness', 'NA')
         slice_location = ds.get('SliceLocation', 'NA')
@@ -208,9 +208,9 @@ class ViewSelector:
                 idx_split = [len(all_img_positions) // num_merged_series * i for i in range(num_merged_series)]
                 unique_image_positions = [all_img_positions[i] for i in idx_split]
 
-                self.my_logger.info(f"Series {series} contains {num_merged_series} merged series. Splitting...")
-
-                self.my_logger.info(f"New 'synthetic' series will range from: {max_series_num+1} to {max_series_num+num_merged_series}")
+                if self.show_warnings:
+                    self.my_logger.info(f"Series {series} contains {num_merged_series} merged series. Splitting...")
+                    self.my_logger.info(f"New 'synthetic' series will range from: {max_series_num+1} to {max_series_num+num_merged_series}")
                 
                 for i in range(0,num_merged_series):
                     series_rows_split = series_rows[series_rows['Image Position Patient'] == unique_image_positions[i]]
