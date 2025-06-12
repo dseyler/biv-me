@@ -111,9 +111,21 @@ class ViewSelector:
         # get patient, study, and series information
         patient_id = ds.get("PatientID", "NA")
         modality = ds.get("Modality","NA")
-        instance_number = ds.get("InstanceNumber","NA")
+        
+        try:
+            instance_number = int(ds.get("InstanceNumber","NA"))
+        except ValueError:
+            self.my_logger.warning(f"InstanceNumber for {dicom_loc} is not an integer.")
+            instance_number = ds.get("InstanceNumber","NA")
+
         series_instance_uid = ds.get("SeriesInstanceUID","NA")
-        series_number = ds.get('SeriesNumber', 'NA')
+
+        try:
+            series_number = int(ds.get('SeriesNumber', 'NA'))
+        except ValueError:
+            self.my_logger.warning(f"SeriesNumber for {dicom_loc} is not an integer.")
+            series_number = ds.get('SeriesNumber', 'NA')
+
         image_position_patient = ds.get("ImagePositionPatient", 'NA')
         image_orientation_patient = ds.get("ImageOrientationPatient", 'NA')
         pixel_spacing = ds.get("PixelSpacing", 'NA')
