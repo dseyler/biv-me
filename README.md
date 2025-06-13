@@ -121,7 +121,7 @@ pip install nnunetv2
 ```
 
 ## ⭐ Future updates 
-biv-me undergoes regular updates for to add new features and apply patches. Make sure to star the repository to see when we make a new release!
+We update biv-me regularly to apply patches and add new features. Make sure to star and/or watch the repository to keep up with new releases!
 
 ## Table of Contents
 - [**Installation**](#🚀-installation-guide)
