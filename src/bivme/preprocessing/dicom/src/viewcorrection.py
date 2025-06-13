@@ -23,11 +23,14 @@ class VSGUI:
 
     def create_window(self):
         self.window = tk.Tk()
+        self.window.geometry("1280x900")  # Set the window size based on screen size
+        self.window.resizable(width=True, height=True)  # Allow resizing of the window
+
         unique_series = self.view_predictions['Series Number'].unique()
         unique_series = sorted(unique_series, key=lambda x: int(x))  # Sort series numbers numerically
 
         self.num_rows = 6*2 + 2 # Doubled to allow for buttons above each image
-        self.num_cols = 9
+        self.num_cols = 8
         self.gridlayout = {}
 
         for i in range(self.num_rows):
@@ -131,5 +134,11 @@ class VSGUI:
             # Populate with current view
             self.list_of_dropdowns.append(ttk.Combobox(self.window, values=LIST_OF_VIEWS, textvariable=stringvars[i], state="readonly"))
             self.list_of_dropdowns[-1].grid(row=self.gridlayout[mapped_series][0]-1, column=self.gridlayout[mapped_series][1])
+
+        # Configure grids
+        for i in range(self.num_rows):
+            self.window.grid_rowconfigure(i, weight=1)
+        for j in range(self.num_cols):
+            self.window.grid_columnconfigure(j, weight=1)
 
         self.window.mainloop()
