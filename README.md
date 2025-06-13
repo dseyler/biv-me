@@ -120,6 +120,9 @@ After PyTorch has been installed, install nnU-Net by entering the following comm
 pip install nnunetv2
 ```
 
+## ⭐ Future updates 
+biv-me undergoes regular updates for to add new features and apply patches. Make sure to star the repository to see when we make a new release!
+
 ## Table of Contents
 - [**Installation**](#🚀-installation-guide)
 
@@ -133,6 +136,7 @@ pip install nnunetv2
   - [Calculating strains from models](#calculating-strains-from-models)  
   - [Calculating wall thickness from models](#calculating-wall-thickness-from-models)
 - [**Postprocessing of models (experimental)**](#postprocessing-of-models-experimental)
+- [**FAQs**](#faqs)
 - [**Contact us**](#contact)    
 
 -----------------------------------------------
@@ -413,7 +417,6 @@ At the moment, we don't have a direct way of generating LV only (endocardium and
 ### *How about the atria?*
 
 We are actively developing a four chamber fit (left ventricle, right ventricle, left atrium, and right atrium) to be released in a future version of biv-me. 
-
 
 ## Contribution - Notation
 -----------------------------------------------
