@@ -287,7 +287,11 @@ class ViewSelector:
 
                     count = 0
                     for name in series_rows['Filename']:
-                        num = int(series_rows['Trigger Time'].values[count])
+                        try:
+                            num = int(series_rows['Trigger Time'].values[count])
+                        except ValueError:
+                            self.my_logger.warning(f"Trigger Time for {name} is not an integer.")
+                            num = count  # Use count as fallback
                         shutil.copy(name, dcm_path / Path(f'{num:05}.dcm')) 
                         count += 1
 
