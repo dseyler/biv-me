@@ -158,11 +158,11 @@ def contour_SAX(segmentation):
     
 
     # # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
-    # if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
-    #     pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=5)
+    if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
+        pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=8)
 
-    #     if len(pairs) > 0:
-    #         RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
+        if len(pairs) > 0:
+            RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
         
         
     # Get intersection points between RV epi and RV myo to keep only free wall points
