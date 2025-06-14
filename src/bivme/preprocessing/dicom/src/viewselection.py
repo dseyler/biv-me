@@ -8,7 +8,7 @@ import PIL.Image as Image
 from pathlib import Path
 
 class ViewSelector:
-    def __init__(self, src, dst, model, type, csv_path, my_logger):
+    def __init__(self, src, dst, model, type, csv_path, show_warnings, my_logger):
         self.src = src
         self.dst = dst
         self.model = model
@@ -18,6 +18,7 @@ class ViewSelector:
         self.sorted_dict = {}
         self.csv_path = csv_path
         self.my_logger = my_logger
+        self.show_warnings = show_warnings
 
     def load_predictions(self):
         self.prepare_data_for_prediction()
@@ -110,15 +111,27 @@ class ViewSelector:
         # get patient, study, and series information
         patient_id = ds.get("PatientID", "NA")
         modality = ds.get("Modality","NA")
-        instance_number = ds.get("InstanceNumber","NA")
+        
+        try:
+            instance_number = int(ds.get("InstanceNumber","NA"))
+        except ValueError:
+            self.my_logger.warning(f"InstanceNumber for {dicom_loc} is not an integer.")
+            instance_number = ds.get("InstanceNumber","NA")
+
         series_instance_uid = ds.get("SeriesInstanceUID","NA")
-        series_number = ds.get('SeriesNumber', 'NA')
+
+        try:
+            series_number = int(ds.get('SeriesNumber', 'NA'))
+        except ValueError:
+            self.my_logger.warning(f"SeriesNumber for {dicom_loc} is not an integer.")
+            series_number = ds.get('SeriesNumber', 'NA')
+
         image_position_patient = ds.get("ImagePositionPatient", 'NA')
         image_orientation_patient = ds.get("ImageOrientationPatient", 'NA')
         pixel_spacing = ds.get("PixelSpacing", 'NA')
         echo_time = ds.get("EchoTime", 'NA')
         repetition_time = ds.get("RepetitionTime", 'NA')
-        trigger_time = float(ds.get('TriggerTime', 'NA'))
+        trigger_time = ds.get('TriggerTime', 'NA')
         image_dimension = [ds.get('Rows', 'NA'), ds.get('Columns', 'NA')]
         slice_thickness = ds.get('SliceThickness', 'NA')
         slice_location = ds.get('SliceLocation', 'NA')
@@ -128,7 +141,8 @@ class ViewSelector:
         try:
             array = ds.pixel_array
         except:
-            self.my_logger.warning(f"Could not load image data for {dicom_loc}. Might not contain an image.")
+            if self.show_warnings:
+                self.my_logger.warning(f"Could not load image data for {dicom_loc}. Might not contain an image.")
             array = None
 
         return patient_id, dicom_loc, modality, instance_number, series_instance_uid, series_number , tuple(image_position_patient), image_orientation_patient, pixel_spacing, echo_time, repetition_time, trigger_time, image_dimension, slice_thickness, array, slice_location, series_description
@@ -187,7 +201,8 @@ class ViewSelector:
             series_rows = self.df.loc[(self.df['Series Number'] == series)]
 
             if len(series_rows) < 10: # unlikely to be a cine
-                self.my_logger.warning(f"Removing series {series} - less than 10 frames")
+                if self.show_warnings:
+                    self.my_logger.warning(f"Removing series {series} - less than 10 frames")
                 continue
 
             all_img_positions = series_rows['Image Position Patient'].values
@@ -206,9 +221,9 @@ class ViewSelector:
                 idx_split = [len(all_img_positions) // num_merged_series * i for i in range(num_merged_series)]
                 unique_image_positions = [all_img_positions[i] for i in idx_split]
 
-                self.my_logger.info(f"Series {series} contains {num_merged_series} merged series. Splitting...")
-
-                self.my_logger.info(f"New 'synthetic' series will range from: {max_series_num+1} to {max_series_num+num_merged_series}")
+                if self.show_warnings:
+                    self.my_logger.info(f"Series {series} contains {num_merged_series} merged series. Splitting...")
+                    self.my_logger.info(f"New 'synthetic' series will range from: {max_series_num+1} to {max_series_num+num_merged_series}")
                 
                 for i in range(0,num_merged_series):
                     series_rows_split = series_rows[series_rows['Image Position Patient'] == unique_image_positions[i]]
@@ -217,7 +232,8 @@ class ViewSelector:
                     series_num = max_series_num + i + 1 # New series number ('fake' series number)
 
                     if len(series_rows_split) < 10: # unlikely to be a cine
-                        self.my_logger.warning(f"Removing series {series_num} - less than 10 frames")
+                        if self.show_warnings:
+                            self.my_logger.warning(f"Removing series {series_num} - less than 10 frames")
                         continue
 
                     img = np.stack(series_rows_split['Img'].values, axis=0)
@@ -227,9 +243,11 @@ class ViewSelector:
                     image_position_patient = series_rows_split['Image Position Patient'].values[0]
                     image_orientation_patient = series_rows_split['Image Orientation Patient'].values[0]
                     pixel_spacing = series_rows_split['Pixel Spacing'].values[0]
+                    slice_location = series_rows_split['Slice Location'].values[0]
 
                     # Add to output
-                    output.append([patient_id, filename, modality, series_instance_uid, series_num, image_position_patient, image_orientation_patient, pixel_spacing, img, num_phases, series_description])
+                    output.append([patient_id, filename, modality, series_instance_uid, series_num, image_position_patient, image_orientation_patient, pixel_spacing, 
+                                   slice_location, img, num_phases, series_description])
 
                     if self.type == "metadata":
                         key = f'{series_num}_{image_position_patient[2]}'
@@ -256,9 +274,11 @@ class ViewSelector:
                 image_position_patient = series_rows['Image Position Patient'].values[0]
                 image_orientation_patient = series_rows['Image Orientation Patient'].values[0]
                 pixel_spacing = series_rows['Pixel Spacing'].values[0]
+                slice_location = series_rows['Slice Location'].values[0]
 
                 # Add to output
-                output.append([patient_id, filename, modality, series_instance_uid, series, image_position_patient, image_orientation_patient, pixel_spacing, img, num_phases, series_description])
+                output.append([patient_id, filename, modality, series_instance_uid, series, image_position_patient, image_orientation_patient, pixel_spacing, 
+                               slice_location, img, num_phases, series_description])
 
                 if self.type == "metadata":
                     key = f'{series_rows["Series Number"].values[0]}_{image_position_patient[2]}'
@@ -267,7 +287,11 @@ class ViewSelector:
 
                     count = 0
                     for name in series_rows['Filename']:
-                        num = int(series_rows['Trigger Time'].values[count])
+                        try:
+                            num = int(series_rows['Trigger Time'].values[count])
+                        except ValueError:
+                            self.my_logger.warning(f"Trigger Time for {name} is not an integer.")
+                            num = count  # Use count as fallback
                         shutil.copy(name, dcm_path / Path(f'{num:05}.dcm')) 
                         count += 1
 
@@ -282,6 +306,7 @@ class ViewSelector:
                                             'Image Position Patient',
                                             'Image Orientation Patient',
                                             'Pixel Spacing', 
+                                            'Slice Location',
                                             'Img',
                                             'Frames Per Slice',
                                             'Series Description'])

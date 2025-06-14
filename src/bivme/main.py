@@ -75,7 +75,7 @@ if __name__ == "__main__":
                       "processing": str(),
                       "states": str()
                       },
-            "view-selection": {"option": str()},
+            "view-selection": {"option": str(), "correct_mode": str()},
             "output_pp": {"overwrite": bool(), "generate_plots": bool(), "output_directory": str()},
 
             "input_fitting": {"gp_directory": str(),
@@ -135,6 +135,9 @@ if __name__ == "__main__":
         shutil.copy(args.config_file, output_folder)
 
     logger.info(f"Found {len(caselist)} cases to process.")
+
+    # Sort caselist
+    caselist.sort()
 
     for i, case in enumerate(caselist):
         logger.info(f"Processing case {i+1}/{len(caselist)}: {case}")

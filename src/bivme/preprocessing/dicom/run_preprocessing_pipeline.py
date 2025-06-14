@@ -74,7 +74,8 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.success(f'Pre-preprocessing complete. Cines extracted to {src}.')
 
     ## Step 1: View selection
-    slice_info_df, num_phases, slice_mapping = select_views(case, src, dst, MODEL_DIR, states, config["view-selection"]["option"], mylogger)
+    slice_info_df, num_phases, slice_mapping = select_views(case, src, dst, MODEL_DIR, states, config["view-selection"]["option"], 
+                                                            config["view-selection"]["correct_mode"], mylogger)
 
     mylogger.success(f'View selection complete.')
     mylogger.info(f'Number of phases: {num_phases}')
@@ -115,6 +116,10 @@ def validate_config(config, mylogger):
     if not (config["view-selection"]["option"] == "default" or config["view-selection"]["option"] == "metadata-only" 
             or config["view-selection"]["option"] == "image-only"  or config["view-selection"]["option"] == "load"):
         mylogger.error(f'Invalid view selection option: {config["view-selection"]["option"]}. Must be "default", "metadata-only", "image-only", or "load".')
+        sys.exit(0)
+
+    if not (config["view-selection"]["correct_mode"] == "automatic" or config["view-selection"]["correct_mode"] == "adaptive" or config["view-selection"]["correct_mode"] == "manual"):
+        mylogger.error(f'Invalid correct mode: {config["view-selection"]["correct_mode"]}. Must be "automatic", "adaptive", or "manual".')
         sys.exit(0)
 
     if not (config["output_pp"]["overwrite"] == True or config["output_pp"]["overwrite"] == False):

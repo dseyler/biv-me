@@ -1,7 +1,7 @@
 <div align="center">
 
-### 6th June, 2025: v1.1.1 released with new interactive pipeline
-Find it at `src/bivme/main_interactive.ipynb`.
+### 13th June, 2025: v1.1.3 released with view correction GUI
+We have added a GUI for interactively correcting view predictions during preprocessing. Check out the new config file structure at `src/bivme/configs/config.toml` for the new options available for view selection.
 
 ### 4th June, 2025: [New v1.1 deep learning models for view selection and segmentation are available!](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) 
 Refer to the [FAQs](#faqs) on how to update your models.
@@ -18,16 +18,15 @@ Refer to the [FAQs](#faqs) on how to update your models.
 
 </div>
 
-
 This repository provides an end-to-end pipeline for generating guidepoint files (**GPFiles**) from CMR DICOMs, fitting biventricular models (**biv-me models**), and computing **functional cardiac metrics** such as volumes, strains, and wall thickness.
 
 Example data is available in the `example/` folder, including input DICOMs, GPFiles, and fitted models for testing and reference.
 
-For a detailed description of the end-to-end image to mesh pipeline, including image preprocessing and biventricular model fitting, please refer to:
-**Dillon JR, Mauger C, Zhao D, Deng Y, Petersen SE, McCulloch AD, Young AA, Nash MP. An open-source end-to-end pipeline for generating 3D+t biventricular meshes from cardiac magnetic resonance imaging. In: Functional Imaging and Modeling of the Heart (FIMH) 2025. (in press)**
+For a detailed description of the end-to-end image to mesh pipeline, including image preprocessing and biventricular model fitting, please refer to: <blockquote> Dillon, J.R., Mauger, C., Zhao, D., Deng, Y., Petersen, S.E., McCulloch, A.D., Young, A.A., & Nash, M.P. An open-source end-to-end pipeline for generating 3D+t biventricular meshes from cardiac magnetic resonance imaging. In: Functional Imaging and Modeling of the Heart (FIMH) 2025 (pp. 372-383). LNCS 15673.  [DOI:10.1007/978-3-031-94562-5_34](https://doi.org/10.1007/978-3-031-94562-5_34) </blockquote>
 
-For a detailed description regarding the fitting of the biventricular model, please refer to:
-**Mauger, C., Gilbert, K., Suinesiaputra, A., Pontre, B., Omens, J., McCulloch, A., & Young, A. (2018, July). An iterative diffeomorphic algorithm for registration of subdivision surfaces: application to congenital heart disease. In 2018 40th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC) (pp. 596-599). IEEE.** [DOI: 10.1109/EMBC.2018.8512394](https://doi.org/10.1109/EMBC.2018.8512394)
+For a detailed description regarding the fitting of the biventricular model, please refer to: <blockquote>Mauger, C., Gilbert, K., Suinesiaputra, A., Pontre, B., Omens, J., McCulloch, A., & Young, A. (2018, July). An iterative diffeomorphic algorithm for registration of subdivision surfaces: application to congenital heart disease. In 2018 40th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC) (pp. 596-599). IEEE. [DOI: 10.1109/EMBC.2018.8512394](https://doi.org/10.1109/EMBC.2018.8512394)</blockquote>
+
+Depending on how you use biv-me, please cite the relevant publication(s) above.  
 
 CMR DICOMs           | Contours                   |        biv-me models                |
 :-------------------------:|:-------------------------:|:-------------------------:|
@@ -121,6 +120,9 @@ After PyTorch has been installed, install nnU-Net by entering the following comm
 pip install nnunetv2
 ```
 
+## ⭐ Future updates 
+We update biv-me regularly to apply patches and add new features. Make sure to star and/or watch the repository to keep up with new releases!
+
 ## Table of Contents
 - [**Installation**](#🚀-installation-guide)
 
@@ -134,6 +136,7 @@ pip install nnunetv2
   - [Calculating strains from models](#calculating-strains-from-models)  
   - [Calculating wall thickness from models](#calculating-wall-thickness-from-models)
 - [**Postprocessing of models (experimental)**](#postprocessing-of-models-experimental)
+- [**FAQs**](#faqs)
 - [**Contact us**](#contact)    
 
 -----------------------------------------------
@@ -405,7 +408,7 @@ git checkout v1.0
 ### *The code doesn't read in some or all of my images. There is nothing wrong with my images, so why might this be happening?*
 There are multiple possible explanations. One possible reason is that your DICOMs are stored in a remote server accessed by an unstable or intermitten network connection, causing dropouts and failures to read certain images.
 
-Another possibility that has been encountered is that your DICOMs have a certain type of JPEG compression that is not supported. In future, we will look to fix this specific problem. For the meantime, refer to [this link here](https://pypi.org/project/pylibjpeg/) for information on how to integrate pylibjpeg with pydicom to decompress your images.
+Another possibility that has been encountered is that your DICOMs have a certain type of image compression that is not supported. We have encountered this problem in the past and each time have made adjustments to allow biv-me to run. However, we have not seen every possible form of image compression. If you think this problem might be occurring with your data, reach out to us with an example and we will be happy to look into it.
 
 ### *This is fine, but can you generate LV only geometries?*
 
@@ -414,7 +417,6 @@ At the moment, we don't have a direct way of generating LV only (endocardium and
 ### *How about the atria?*
 
 We are actively developing a four chamber fit (left ventricle, right ventricle, left atrium, and right atrium) to be released in a future version of biv-me. 
-
 
 ## Contribution - Notation
 -----------------------------------------------

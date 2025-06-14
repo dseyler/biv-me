@@ -158,11 +158,11 @@ def contour_SAX(segmentation):
     
 
     # # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
-    # if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
-    #     pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=5)
+    if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
+        pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=8)
 
-    #     if len(pairs) > 0:
-    #         RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
+        if len(pairs) > 0:
+            RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
         
         
     # Get intersection points between RV epi and RV myo to keep only free wall points
@@ -191,6 +191,10 @@ def contour_SAX(segmentation):
     # If there are no lv endo points, remove the lv epi points
     if len(LV_endo_pts) == 0:
         LV_epi_pts = []
+
+    # If there are no rv endo points, remove the rv epi points
+    if len(RV_endo_pts) == 0:
+        RV_epi_pts = []
                 
     return [LV_endo_pts, LV_epi_pts, RV_septal_pts, RV_fw_pts, RV_epi_pts]
 
@@ -253,7 +257,7 @@ def contour_RVOT(segmentation):
     # Get intersection points between RV myo and RV endo to separate free wall from septal wall
     if len(RV_endo_pts)>0 and len(RV_myo_pts)>0:
 
-        pairs = get_intersections(RV_endo_pts, RV_myo_pts, distance_cutoff = 3)
+        pairs = get_intersections(RV_endo_pts, RV_myo_pts, distance_cutoff = 5) # Relatively large cutoff because of tendency for RV myo to break
 
         if len(pairs) > 0:
             RV_fw_pts = np.array([pnt.tolist() for i, pnt in enumerate(RV_endo_pts) if i in np.unique(pairs[:,0])], 
@@ -269,12 +273,12 @@ def contour_RVOT(segmentation):
         RV_fw_pts = RV_endo_pts
         RV_s_pts = []
             
-    # # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
-    # if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
-    #     pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=5)
+    # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
+    if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
+        pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=8)
 
-    #     if len(pairs) > 0:
-    #         RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
+        if len(pairs) > 0:
+            RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
 
     # Get intersection points between RV epi and RV myo pts keep only free wall points
     if len(RV_epi_pts)>0 and len(RV_myo_pts)>0:
@@ -422,12 +426,12 @@ def contour_3ch(segmentation):
         RV_septal_pts = []
         RV_fw_pts = RV_endo_pts
             
-    # # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
-    # if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
-    #     pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=5)
+    # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
+    if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
+        pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=8)
 
-    #     if len(pairs) > 0:
-    #         RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
+        if len(pairs) > 0:
+            RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
 
     # Get intersection points between LV endo and la to clean LV endo pts
     if len(LV_endo_pts)>0 and len(la_pts)>0:
@@ -566,13 +570,12 @@ def contour_4ch(segmentation):
         RV_septal_pts = []
         RV_fw_pts = RV_endo_pts
             
+    # Get intersection points between RV epi and RV fw to remove extraneous RV epi points
+    if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
+        pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=8)
 
-    # # Get intersection points between RV epi and RV fw to remove extraneous RV epi points
-    # if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
-    #     pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=5)
-
-    #     if len(pairs) > 0:
-    #         RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
+        if len(pairs) > 0:
+            RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
 
     # Get intersection points between LV endo and la to clean LV endo pts
     if len(LV_endo_pts)>0 and len(la_pts)>0:
