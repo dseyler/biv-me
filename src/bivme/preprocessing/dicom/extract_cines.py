@@ -37,8 +37,15 @@ def extract_cines(src, dst, my_logger):
                     file = f'{file}.dcm'  # Ensure the file has a .dcm extension
                 
                 # Check if file already exists - sometimes DICOMs have non-unique names, so we need to ensure we don't overwrite them
-                if os.path.exists(os.path.join(processed_dcm_dir, file)):
-                    series_number = dcm.SeriesNumber
-                    file = file.replace('.dcm', f'_{series_number}.dcm')  # Rename to avoid overwriting. Arbitrarily appending series number to the filename
+                count = 0
+                while True:
+                    if os.path.exists(os.path.join(processed_dcm_dir, file)):
+                        file = file.replace('.dcm', f'_{count}.dcm')  # Rename to avoid overwriting. Arbitrarily appending number to the filename
+                        if not os.path.exists(os.path.join(processed_dcm_dir, file)):
+                            break
+                        else:
+                            count += 1
+                    else:
+                        break
 
                 dcm.save_as(os.path.join(processed_dcm_dir, file))
