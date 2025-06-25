@@ -79,12 +79,12 @@ option = "default"
 # * "load" : View predictions are loaded from the states folder, if they exist
 # Default: "default"
 
-correct_mode = "automatic"
+correct_mode = "adaptive"
 # Define whether you would like to manually review and correct view predictions. "adaptive" is generally recommended, but "automatic" is the default for the example.
 # * "manual": will launch a GUI after completing view predictions to allow you to correct any mispredictions
 # * "adaptive": will only launch a GUI if there are any poor predictions or missing views
 # * "automatic": will not launch the GUI and will use the predictions as they are with no interruption
-# Default: "automatic" 
+# Default: "adaptive" 
 
 [output_pp]
 overwrite = false
