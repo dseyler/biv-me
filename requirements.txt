@@ -1,6 +1,6 @@
 cython==3.0.11
 pandas==2.2.2
-pyvista==0.44.1
+pyvista==0.45.0
 plotly==5.22.0
 scipy==1.13.1
 moviepy==1.0.3
