@@ -29,10 +29,16 @@ def extract_cines(src, dst, my_logger):
                 description = dcm.SeriesDescription.lower() # lower case for easier comparison
             except:
                 my_logger.warning(f'Could not find series description tag for {file}. Excluded for now.')
+                continue
 
             if any(term in description for term in INCLUSION_TERMS) and not any(term in description for term in EXCLUSION_TERMS):
                 # Save the cine images to the destination directory as .dcm files
-                if file.endswith('.dcm'):
-                    dcm.save_as(os.path.join(processed_dcm_dir, file))
-                else:
-                    dcm.save_as(os.path.join(processed_dcm_dir, f'{file}.dcm'))
+                if not file.endswith('.dcm'):
+                    file = f'{file}.dcm'  # Ensure the file has a .dcm extension
+                
+                # Check if file already exists - sometimes DICOMs have non-unique names, so we need to ensure we don't overwrite them
+                if os.path.exists(os.path.join(processed_dcm_dir, file)):
+                    series_number = dcm.SeriesNumber
+                    file = file.replace('.dcm', f'_{series_number}.dcm')  # Rename to avoid overwriting. Arbitrarily appending series number to the filename
+
+                dcm.save_as(os.path.join(processed_dcm_dir, file))
