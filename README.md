@@ -1,5 +1,8 @@
 <div align="center">
 
+### 25th June, 2025: v1.1.4 released
+Minor update resolves issue related to preprocessing of DICOMs with non-unique file names. 
+
 ### 13th June, 2025: v1.1.3 released with view correction GUI
 We have added a GUI for interactively correcting view predictions during preprocessing. Check out the new config file structure at `src/bivme/configs/config.toml` for the new options available for view selection.
 
