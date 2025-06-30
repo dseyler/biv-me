@@ -83,6 +83,10 @@ def segment_views(dst, model, slice_info_df, my_logger):
         os.makedirs(os.path.join(input_folder, view), exist_ok=True)
         os.makedirs(os.path.join(output_folder, view), exist_ok=True)
 
+        if len(slice_info_df[slice_info_df['View'] == view]) == 0:
+            my_logger.info(f'No {view} images found, skipping...')
+            continue
+        
         my_logger.info(f'Writing {view} images to nifti files...')
 
         view_rows = slice_info_df[slice_info_df['View'] == view]

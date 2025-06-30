@@ -1,5 +1,8 @@
 <div align="center">
 
+### 25th June, 2025: v1.1.4 patch released
+Minor patch to address issues related to preprocessing of DICOMs with non-unique file names. 
+
 ### 13th June, 2025: v1.1.3 released with view correction GUI
 We have added a GUI for interactively correcting view predictions during preprocessing. Check out the new config file structure at `src/bivme/configs/config.toml` for the new options available for view selection.
 
@@ -157,10 +160,10 @@ usage: main.py [-h] [-config CONFIG_FILE]
 
 To run preprocessing and/or fitting, a **config file** must be created. The config file allows you to choose which modules to run and how you would like them to be run. An example of a config file can be found in `src/bivme/configs/config.toml`. If you wish, you can create a new config file for each time you want to make changes. Just make sure to update the path of the config file when you run the code!
 
-### **Running the pipeline interactively**
-We also provide an option to run the pipeline in an interactive step-by-step manner to allow for manual correction. This pipeline is the same as the one in `main.py`, but it is structured as a Jupyter notebook instead. Open the notebook at `src/bivme/main_interactive.ipynb` to get the interactive version of biv-me started.
+### Running the pipeline interactively
+We also provide an option to run the pipeline in an interactive step-by-step manner. This pipeline is the same as the one in `main.py`, but it is structured as a Jupyter notebook instead. It is a great place to start if you want to troubleshoot or to learn how the code works. Open the notebook at `src/bivme/main_interactive.ipynb` to get the interactive version of biv-me started.
 
-#### **Example usage** 
+### Example usage 
 Example DICOMs are provided in `example/dicoms` and example GPFiles are provided in `example/guidepoints/default`. You can verify that the repository is working by running biv-me on this example case (called *patient1*), using the following commands.
 
 ```python
@@ -169,6 +172,8 @@ python main.py -config configs/config.toml
 ```
 
 By default, this will generate new GPFiles from the DICOMs for *patient1* in `example/dicoms` (**preprocessing**), fit biv-me models to the new GPFiles created in `example/guidepoints/test` (**fitting**), and save the fitted models to the `src/output` directory. You can review the default paths by opening the config file at `src/bivme/configs/config.toml`.
+
+During preprocessing, you will be presented with a GUI that displays the automatically predicted views and prompts you to make corrections (if needed), save those corrections, and then continue (by closing the GUI). In this example case, the automatically predicted views are correct, but they may not always be. To minimise downstream errors, it is recommended to run biv-me with the *correct_mode* set to 'adaptive' in the config file, as it is for the example case. However, it is also possible to run fully automatically by setting *correct_mode* to 'automatic'.
 
 **If you did not configure the preprocessing in Steps 4 and 5 of the installation, you will not be able to run preprocessing**. If so, make sure to set *preprocessing=False* in the config file before running. If you turn off preprocessing, running `src/bivme/main.py` will carry out fitting only on the example GPFiles in `example/guidepoints/default`.
 
@@ -199,7 +204,7 @@ As long as the DICOM images are organised separately by case, **they can be arra
 ### Fitting biv-me models
 When you run fitting, biv-me models will be created for each case for which there are GPFiles and a SliceInfoFile.txt file. 
 
-If you already have GPFiles, then you do not need to run preprocessing. Simply set the *gp_directory* in the config file to the folder where you have GPFiles and SliceInfoFile.txt files, separated into one folder per case. 
+If you already have GPFiles, then you do not need to run preprocessing. Simply set *preprocessing=False* and *fitting=True* in the config file, and set the *gp_directory* to the folder where you have GPFiles and SliceInfoFile.txt files, separated into one folder per case. 
 
 If you want to generate GPFiles yourself (i.e., not using biv-me preprocessing), but you don't know how to, the example GPFiles in `example/guidepoints/default` can serve as reference for the required format.
 
@@ -392,7 +397,7 @@ git submodule update --init --remote
 
 If you want to access any previous version of the deep learning models, you can visit the [deep learning model repository](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) to find the tag for that version (e.g. v1.0).
 
-To roll back the models, you need to checkout the submodule at the version you want. To do so, type the following into your terminal, where 'tag' is the tag for the version of the models you want to roll back to.
+To roll back the models, you need to checkout the submodule at the version you want in your local clone of biv-me. To do so, type the following into your terminal, where 'tag' is the tag for the version of the models you want to roll back to.
 
 ```bash
 cd src/bivme/preprocessing/dicom/models
@@ -406,9 +411,11 @@ git checkout v1.0
 ```
 
 ### *The code doesn't read in some or all of my images. There is nothing wrong with my images, so why might this be happening?*
-There are multiple possible explanations. One possible reason is that your DICOMs are stored in a remote server accessed by an unstable or intermitten network connection, causing dropouts and failures to read certain images.
+There are multiple possible explanations. 
 
-Another possibility that has been encountered is that your DICOMs have a certain type of image compression that is not supported. We have encountered this problem in the past and each time have made adjustments to allow biv-me to run. However, we have not seen every possible form of image compression. If you think this problem might be occurring with your data, reach out to us with an example and we will be happy to look into it.
+One possible reason is that your DICOMs are stored in a remote server accessed by an unstable or intermittent network connection, causing occasional dropouts and failures to read certain images. If possible, biv-me should be run locally or through a wired connection to ensure this does not happen. 
+
+Another reason why some or all of your images cannot be read is that your DICOMs have a certain type of image compression that is not supported by pydicom. We have encountered this problem in the past and have since made adjustments, namely by incorporating pylibjpeg into the biv-me environment. However, we have not seen every possible form of image compression. If you think this problem might be occurring with your data, reach out to us with an example and we will be happy to look into it.
 
 ### *This is fine, but can you generate LV only geometries?*
 
@@ -416,7 +423,7 @@ At the moment, we don't have a direct way of generating LV only (endocardium and
 
 ### *How about the atria?*
 
-We are actively developing a four chamber fit (left ventricle, right ventricle, left atrium, and right atrium) to be released in a future version of biv-me. 
+We are actively developing a four chamber model (left ventricle, right ventricle, left atrium, and right atrium) to be released in a future version of biv-me. 
 
 ## Contribution - Notation
 -----------------------------------------------
