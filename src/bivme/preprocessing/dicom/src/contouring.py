@@ -327,6 +327,8 @@ def contour_2ch(segmentation):
         if len(pairs) > 0:
             LV_endo_pts = np.array([pnt.tolist() for i, pnt in enumerate(LV_endo_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
+            cleaned_la_pts = np.array([pnt.tolist() for i, pnt in enumerate(la_pts) if i not in np.unique(pairs[:,1])], 
+                                dtype=np.int64)
             
     # Get intersection points between LV epi and LA to clean LV epi pts
     if len(LV_epi_pts)>0 and len(la_pts)>0:
@@ -335,6 +337,8 @@ def contour_2ch(segmentation):
         if len(pairs) > 0:
             LV_epi_pts = np.array([pnt.tolist() for i, pnt in enumerate(LV_epi_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
+            
+    la_pts = cleaned_la_pts if 'cleaned_la_pts' in locals() else la_pts
             
     return [LV_endo_pts, LV_epi_pts, la_pts]
 
@@ -440,6 +444,8 @@ def contour_3ch(segmentation):
         if len(pairs) > 0:
             LV_endo_pts = np.array([pnt.tolist() for i, pnt in enumerate(LV_endo_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
+            cleaned_la_pts = np.array([pnt.tolist() for i, pnt in enumerate(la_pts) if i not in np.unique(pairs[:,1])],
+                                dtype=np.int64)
             
     # Get intersection points between LV epi and la to clean LV epi pts
     if len(LV_epi_pts)>0 and len(la_pts)>0:
@@ -448,6 +454,8 @@ def contour_3ch(segmentation):
         if len(pairs) > 0:
             LV_epi_pts = np.array([pnt.tolist() for i, pnt in enumerate(LV_epi_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
+            
+    la_pts = cleaned_la_pts if 'cleaned_la_pts' in locals() else la_pts
     
     # Get intersection points between LV endo and aorta to clean LV endo pts
     if len(LV_endo_pts)>0 and len(aorta_pts)>0:
@@ -518,7 +526,6 @@ def contour_4ch(segmentation):
     else:
         RV_endo_pts = []
 
-
     contours, hierarchy = cv2.findContours(cv2.inRange(RV_epi, 1, 1), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     if len(contours) > 0:
         RV_epi_pts = []
@@ -584,6 +591,8 @@ def contour_4ch(segmentation):
         if len(pairs) > 0:
             LV_endo_pts = np.array([pnt.tolist() for i, pnt in enumerate(LV_endo_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
+            cleaned_la_pts = np.array([pnt.tolist() for i, pnt in enumerate(la_pts) if i not in np.unique(pairs[:,1])],
+                                dtype=np.int64)
             
     # Get intersection points between LV epi and la to clean LV epi pts
     if len(LV_epi_pts)>0 and len(la_pts)>0:
@@ -592,6 +601,8 @@ def contour_4ch(segmentation):
         if len(pairs) > 0:
             LV_epi_pts = np.array([pnt.tolist() for i, pnt in enumerate(LV_epi_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
+            
+    la_pts = cleaned_la_pts if 'cleaned_la_pts' in locals() else la_pts 
     
     # Get intersection points between RV fw and ra to clean RV fw pts
     if len(RV_fw_pts)>0 and len(ra_pts)>0:
@@ -600,7 +611,9 @@ def contour_4ch(segmentation):
         if len(pairs) > 0:
             RV_fw_pts = np.array([pnt.tolist() for i, pnt in enumerate(RV_fw_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
-    
+            ra_pts = np.array([pnt.tolist() for i, pnt in enumerate(ra_pts) if i not in np.unique(pairs[:,1])],
+                                dtype=np.int64)
+            
     # Get intersection points between RV epi and RV myo to keep only free wall points
     if len(RV_epi_pts)>0 and len(RV_myo_pts)>0:
         pairs = get_intersections(RV_epi_pts, RV_myo_pts, distance_cutoff=1.5)
@@ -608,7 +621,6 @@ def contour_4ch(segmentation):
         if len(pairs) > 0:
             RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
 
-    
     # Remove intersection between RV epi and LV epi
     if len(RV_epi_pts)>0 and len(LV_epi_pts)>0:
         pairs = get_intersections(RV_epi_pts, LV_epi_pts, distance_cutoff=1.5)
@@ -618,4 +630,3 @@ def contour_4ch(segmentation):
                                 dtype=np.int64)
             
     return [LV_endo_pts, LV_epi_pts, RV_septal_pts, RV_fw_pts, la_pts, ra_pts, RV_epi_pts]
-
