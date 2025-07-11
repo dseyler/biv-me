@@ -113,9 +113,8 @@ def validate_config(config, mylogger):
     assert os.path.exists(config["input_pp"]["source"]), \
         f'DICOM folder does not exist! Make sure to add the correct directory under "source" in the config file.'
     
-    if not (config["view-selection"]["option"] == "default" or config["view-selection"]["option"] == "metadata-only" 
-            or config["view-selection"]["option"] == "image-only"  or config["view-selection"]["option"] == "load"):
-        mylogger.error(f'Invalid view selection option: {config["view-selection"]["option"]}. Must be "default", "metadata-only", "image-only", or "load".')
+    if not (config["view-selection"]["option"] == "default" or config["view-selection"]["option"] == "image-only"  or config["view-selection"]["option"] == "load"):
+        mylogger.error(f'Invalid view selection option: {config["view-selection"]["option"]}. Must be "default", "image-only", or "load".')
         sys.exit(0)
 
     if not (config["view-selection"]["correct_mode"] == "automatic" or config["view-selection"]["correct_mode"] == "adaptive" or config["view-selection"]["correct_mode"] == "manual"):

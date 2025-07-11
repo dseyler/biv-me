@@ -40,7 +40,7 @@ def inverse_coordinate_transformation(coordinate, imagePositionPatient, imageOri
                 [X[2]*ps[0], Y[2]*ps[1], 0, S[2]],
                 [0, 0, 0, 1]])
 
-    coord = np.array([coordinate[1], coordinate[0], 0, 1.0])
+    coord = np.array([coordinate[0], coordinate[1], 0, 1.0])
     
     # perform transformation and return as list
     return [np.round(x,5) for x in M @ coord.T]

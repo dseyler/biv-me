@@ -525,7 +525,6 @@ class SliceViewer:
                         continue
                         
                     # Invert points first due to initial transpose
-                    points = [np.flip(point) for point in points]
                     pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                             for point in points]
 
@@ -564,7 +563,6 @@ class SliceViewer:
                     if len(points) == 0:
                         continue
 
-                    points = [np.flip(point) for point in points]
                     pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                             for point in points]
                             
@@ -598,7 +596,6 @@ class SliceViewer:
                     if len(points) == 0:
                         continue
 
-                    points = [np.flip(point) for point in points]
                     pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                             for point in points]
                     
@@ -647,7 +644,6 @@ class SliceViewer:
                     if len(points)== 0:
                         continue
 
-                    points = [np.flip(point) for point in points]
                     pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                             for point in points]
                     
@@ -703,11 +699,9 @@ class SliceViewer:
                         continue
 
                     elif points.size == 2:
-                        points = np.flip(points)
                         pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
 
                     else:
-                        points = [np.flip(point) for point in points]
                         pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                                 for point in points]
 

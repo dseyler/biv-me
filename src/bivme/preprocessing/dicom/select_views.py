@@ -113,15 +113,15 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
 
         all_series = list(set(np.concatenate([metadata_view_predictions['Series Number'].values,image_view_predictions['Series Number'].values])))
         view_predictions_array = []
-        refinement_map = {'2ch': 'LAX', '2ch-RT': 'LAX', '3ch': 'LAX', '4ch': 'LAX', 'LVOT': 'SAX', 'OTHER': 'SAX', 'RVOT': 'Outflow', 'RVOT-T': 'Outflow', 'SAX': 'SAX', 'SAX-atria': 'SAX'}   # Map refined views to view types (SAX, LAX, Outflow)
+        refinement_map = {'2ch': 'LAX', '2ch-RT': 'LAX', '3ch': 'LAX', '4ch': 'LAX', 'LVOT': 'Outflow', 'OTHER': 'SAX', 'RVOT': 'LAX', 'RVOT-T': 'Outflow', 'SAX': 'SAX', 'SAX-atria': 'SAX'}   # Map refined views to view types (SAX, LAX, Outflow)
                                                                                                                                                                                                 # LVOT is considered SAX for the purposes of this model
         # Loop over all series and get the predictions from both metadata and image-based models                                                                                               
         for series in all_series:
             metadata_row = metadata_view_predictions[metadata_view_predictions['Series Number'] == series]
             image_row = image_view_predictions[image_view_predictions['Series Number'] == series]
 
-            metadata_pred = metadata_row['Predicted View'].values[0]
-            metadata_pred_type = refinement_map[metadata_pred]
+            metadata_pred_type = metadata_row['View Class'].values[0]
+
             image_pred = image_row['Predicted View'].values[0]
             image_pred_type = refinement_map[image_pred]
 
@@ -131,12 +131,12 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             # Scenario 1: Metadata and image-based predictions agree on view type. We trust the image-based prediction.
             if metadata_pred_type == image_pred_type:
                 if conf < CONFIDENCE_THRESHOLD:
-                    my_logger.warning(f"Low confidence for series {series} with image based prediction ({image_pred}). Metadata-based prediction is {metadata_pred}.") # TODO: Remove after debugging
+                    my_logger.warning(f"Low confidence for series {series} with image based prediction ({image_pred}). Metadata-based prediction is {metadata_pred_type}.") # TODO: Remove after debugging
                 view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
 
             # Scenario 2: Metadata and image-based predictions disagree on view type. We use the metadata-based prediction to correct the image-based prediction
             elif (metadata_pred_type == 'SAX' and image_pred_type == 'LAX') or (metadata_pred_type == 'LAX' and image_pred_type == 'SAX'): 
-                my_logger.warning(f'Series {series} metadata and image-based predictions conflict: {metadata_pred} ({metadata_pred_type}) vs {image_pred} ({image_pred_type}). Using metadata-based prediction to correct image-based prediction...') # TODO: Remove after debugging
+                my_logger.warning(f'Series {series} metadata and image-based predictions conflict: {metadata_pred_type} ({metadata_pred_type}) vs {image_pred} ({image_pred_type}). Using metadata-based prediction to correct image-based prediction...') # TODO: Remove after debugging
                 # Zero out the confidence of the incorrect categories
                 confidences = []
                 for v in list(refinement_map.keys()):
@@ -150,34 +150,8 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 vote_share = 0
                 view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
 
-            # Scenario 3: Metadata and image-based predictions disagree on view type, and the image-based prediction has low confidence. We use the metadata-based prediction.
             elif conf < CONFIDENCE_THRESHOLD:
-                if metadata_pred_type == 'SAX': # Metadata model performs poorly distinguishing between SAX type views, so we use to it correct the image-based model instead
-                    my_logger.warning(f'Low confidence for series {series} with image based prediction: {image_pred} ({image_pred_type}). Using metadata-based prediction ({metadata_pred}) to correct to a SAX type view...') # TODO: Remove after debugging
-                    # Zero out the confidence of the incorrect categories
-                    confidences = []
-                    for v in list(refinement_map.keys()):
-                        if refinement_map[v] != metadata_pred_type:
-                            image_row[f'{v} confidence'] = 0
-                        confidences.append(image_row[f'{v} confidence'].values[0])
-                    
-                    # Image prediction is the view with the highest confidence remaining
-                    image_pred = list(refinement_map.keys())[np.argmax(confidences)]
-                    conf = image_row[f'{image_pred} confidence'].values[0]
-                    vote_share = 0
-
-                    view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
-
-                else: # Otherwise just use the metadata-based prediction directly
-                    my_logger.warning(f'Low confidence for series {series} with image based prediction: {image_pred} ({image_pred_type}). Using metadata-based prediction ({metadata_pred}) instead...') # TODO: Remove after debugging
-                    conf = 0 # Set confidence and vote share to 0 as we are not *that* confident in the metadata-based prediction
-                    vote_share = 0
-                    view_predictions_array.append([series, metadata_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
-
-            # Scenario 4: Metadata and image-based predictions disagree on view type, but the image-based prediction has high confidence. We trust the image-based prediction.
-            elif conf >= CONFIDENCE_THRESHOLD:
-                my_logger.warning(f'Series {series} metadata and image-based predictions conflict: {metadata_pred} ({metadata_pred_type}) vs {image_pred} ({image_pred_type}). Using image-based prediction for now...') # TODO: Remove after debugging
-                view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
+                my_logger.warning(f"Low confidence for series {series} with image based prediction ({image_pred}). Metadata-based prediction is {metadata_pred_type}.")
                 
         view_predictions = pd.DataFrame(view_predictions_array, columns=['Series Number', 'Predicted View', 'Vote Share', 'Confidence', 'Frames Per Slice'])
         csv_path = os.path.join(dst, 'view-classification', 'view_predictions.csv')
@@ -261,105 +235,6 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             pass
         else:
             raise ValueError('Invalid correction mode. Please use "manual" or "automatic".')
-        
-    elif option == 'metadata-only':
-        # Metadata-based model
-        csv_path = os.path.join(dst, 'view-classification', 'view_predictions.csv')
-        my_logger.info('Performing metadata-based view prediction...')
-        viewSelector = ViewSelector(src, dst, model, type='metadata', csv_path=csv_path, show_warnings=True, my_logger=my_logger)
-        predict_views(viewSelector)
-        my_logger.success('Metadata-based view prediction complete.')
-
-        view_predictions = pd.read_csv(csv_path)
-        
-        # Restucture dataframe
-        all_series = view_predictions['Series Number'].values
-        view_predictions_array = []                                                                               
-        for series in all_series:
-            image_row = view_predictions[view_predictions['Series Number'] == series]
-            image_pred = image_row['Predicted View'].values[0]
-
-            # Metadata-based model does not have confidence or vote share, so set to arbitrary (equal) values. Let's say 0 for now
-            conf = 0
-            vote_share = 0
-
-            view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
-
-        view_predictions = pd.DataFrame(view_predictions_array, columns=['Series Number', 'Predicted View', 'Vote Share', 'Confidence', 'Frames Per Slice'])
-
-        ## Flag any slices with non-matching number of phases
-        # Use the SAX series as the reference for the 'right' number of phases
-        try:
-            sax_series = view_predictions[view_predictions['Predicted View'] == 'SAX'] 
-            num_phases = statistics.mode(sax_series['Frames Per Slice'].values)
-        except statistics.StatisticsError: # If no mode found (i.e. two values with equally similar counts), use median
-            num_phases = np.median(sax_series['Frames Per Slice'].values)
-        
-        for i, row in viewSelector.df.iterrows():
-            if row['Frames Per Slice'] != num_phases:
-                my_logger.warning(f"Series {row['Series Number']} has a mismatching number of phases ({row['Frames Per Slice']} vs {num_phases}).")
-
-        view_predictions = handle_duplicates(view_predictions, viewSelector, my_logger) # If duplicate slices are found, choose which ones to keep based on which was more recently acquired (higher series number) as confidence is not available for metadata-based model
-
-        # Print summary to log
-        my_logger.success(f'View predictions for {patient}:')
-        for view in view_predictions['Predicted View'].unique():
-            my_logger.info(f'{view}: {len(view_predictions[view_predictions["Predicted View"] == view])} series')
-
-        # Sort by series number
-        view_predictions = view_predictions.sort_values('Series Number')
-
-        # Write view predictions to csv
-        view_predictions.to_csv(csv_path, mode='w', index=False)
-
-        # Save to states folder
-        states_path = os.path.join(states, 'view_predictions.csv')
-        view_predictions.to_csv(states_path, mode='w', index=False)
-
-        # Write pngs into respective view folders
-        viewSelector.write_sorted_pngs()
-
-        # Corrections?
-        if correct_mode == 'manual':
-            my_logger.info('Manual corrections mode enabled. Launching view correction GUI...')
-            # Run the view correction GUI
-            view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
-
-        elif correct_mode == 'adaptive':
-            my_logger.info('Adaptive corrections mode enabled. Checking for missing/bad predictions...')
-            
-            # Check if there are missing views
-            all_views = view_predictions['Predicted View'].unique()
-            views_missing = []
-            if not '2ch' in all_views:
-                views_missing.append('2ch')
-            if not '3ch' in all_views:
-                views_missing.append('3ch')
-            if not '4ch' in all_views:
-                views_missing.append('4ch')
-            if not 'SAX' in all_views:
-                views_missing.append('SAX')
-            
-            if len(views_missing) > 0:
-                my_logger.warning(f'Views {views_missing} are missing from the predictions.  Launching view correction GUI...')
-                # Run the view correction GUI
-                view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
-
-            else:
-                # Check for any predictions with low confidence 
-                low_confidence = view_predictions[view_predictions['Confidence'] < CONFIDENCE_THRESHOLD]
-                if len(low_confidence) > 0:
-                    my_logger.warning(f'Found predictions with low confidence.  Launching view correction GUI...')
-                    # Run the view correction GUI
-                    view_predictions, viewSelector = correct_views(patient, dst, viewSelector, csv_path, states_path, my_logger)
-                else:
-                    my_logger.success('No missing views or low confidence predictions found. No corrections needed (hopefully).')
-
-        elif correct_mode == 'automatic':
-            pass
-        else:
-            raise ValueError('Invalid correction mode. Please use "manual", "adaptive", or "automatic".')
-        
 
     elif option == 'image-only':
         # Image-based model

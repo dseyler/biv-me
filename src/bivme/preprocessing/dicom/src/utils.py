@@ -170,3 +170,24 @@ def from_2d_to_3d(
     p3 = p3.T
 
     return p3[0, 0], p3[0, 1], p3[0, 2]
+
+def plane_intersect(a, b):
+    """
+    a, b   4-tuples/lists
+           Ax + By +Cz + D = 0
+           A,B,C,D in order  
+
+    output: 2 points on line of intersection, np.arrays, shape (3,)
+    """
+    a_vec, b_vec = np.array(a[:3]), np.array(b[:3])
+
+    aXb_vec = np.cross(a_vec, b_vec)
+
+    A = np.array([a_vec, b_vec, aXb_vec])
+    d = np.array([-a[3], -b[3], 0.]).reshape(3,1)
+
+# could add np.linalg.det(A) == 0 test to prevent linalg.solve throwing error
+
+    p_inter = np.linalg.solve(A, d).T
+
+    return p_inter[0], (p_inter + aXb_vec)[0]

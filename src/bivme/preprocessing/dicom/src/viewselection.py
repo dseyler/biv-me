@@ -191,9 +191,6 @@ class ViewSelector:
         # self.my_logger.info(f"{len(unique_series)} unique series found")
         count = 0
 
-        if self.type == "metadata":
-            os.makedirs(os.path.join(self.dst, 'view-classification', 'temp'), exist_ok=True)
-
         max_series_num = self.df['Series Number'].max()
 
         for _, row in unique_series.iterrows():
@@ -248,19 +245,6 @@ class ViewSelector:
                     # Add to output
                     output.append([patient_id, filename, modality, series_instance_uid, series_num, image_position_patient, image_orientation_patient, pixel_spacing, 
                                    slice_location, img, num_phases, series_description])
-
-                    if self.type == "metadata":
-                        key = f'{series_num}_{image_position_patient[2]}'
-                        dcm_path = os.path.join(self.dst, 'view-classification', 'temp',key)
-                        os.makedirs(dcm_path, exist_ok=True) 
-
-                        count = 0
-                        for name in series_rows_split['Filename']:
-                            num = int(series_rows_split['Trigger Time'].values[count])
-                            shutil.copy(name, dcm_path / Path(f'{num:05}.dcm')) 
-                            count += 1
-
-                        self.sorted_dict[key] = series_rows_split
                         
                 # Update max series number
                 max_series_num += num_merged_series
@@ -280,22 +264,6 @@ class ViewSelector:
                 output.append([patient_id, filename, modality, series_instance_uid, series, image_position_patient, image_orientation_patient, pixel_spacing, 
                                slice_location, img, num_phases, series_description])
 
-                if self.type == "metadata":
-                    key = f'{series_rows["Series Number"].values[0]}_{image_position_patient[2]}'
-                    dcm_path = os.path.join(self.dst, 'view-classification', 'temp',key)
-                    os.makedirs(dcm_path, exist_ok=True) 
-
-                    count = 0
-                    for name in series_rows['Filename']:
-                        try:
-                            num = int(series_rows['Trigger Time'].values[count])
-                        except ValueError:
-                            self.my_logger.warning(f"Trigger Time for {name} is not an integer.")
-                            num = count  # Use count as fallback
-                        shutil.copy(name, dcm_path / Path(f'{num:05}.dcm')) 
-                        count += 1
-
-                    self.sorted_dict[key] = series_rows
 
         # generated pandas dataframe to store information from headers
         self.df = pd.DataFrame(sorted(output), columns=['Patient ID',
