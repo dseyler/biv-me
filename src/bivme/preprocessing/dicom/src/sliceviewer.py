@@ -569,7 +569,6 @@ class SliceViewer:
                             for point in points]
                             
                     # Write to file
-                    
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
 
         elif self.view == '2ch':
@@ -584,11 +583,13 @@ class SliceViewer:
 
                 point_lists = [LV_endo_pts, 
                                 LV_epi_pts,
-                                MV_pts]
+                                MV_pts,
+                                la_pts]
                 
                 labels = ['LAX_LV_ENDOCARDIAL',
                             'LAX_LV_EPICARDIAL',
-                            'MITRAL_VALVE']
+                            'MITRAL_VALVE',
+                            'LAX_LA']
 
                 for i,points in enumerate(point_lists):
                     if points is None:
@@ -614,6 +615,8 @@ class SliceViewer:
                 RV_fw_pts = self.contours[phase][3]
                 RV_epi_pts = self.contours[phase][6]
 
+                la_pts = self.contours[phase][4]
+
                 MV_pts = self.mv[self.view][str(phase)]
                 AV_pts = self.av[self.view][str(phase)]
 
@@ -623,6 +626,7 @@ class SliceViewer:
                                LV_epi_pts,
                                LV_endo_pts,
                                RV_epi_pts,
+                               la_pts,
                                MV_pts,
                                AV_pts]
                 
@@ -632,6 +636,7 @@ class SliceViewer:
                             'LAX_LV_EPICARDIAL',
                             'LAX_LV_ENDOCARDIAL',
                             'LAX_RV_EPICARDIAL',
+                            'LAX_LA',
                             'MITRAL_VALVE',
                             'AORTA_VALVE']
 
@@ -659,7 +664,8 @@ class SliceViewer:
                 RV_fw_pts = self.contours[phase][3]
                 RV_epi_pts = self.contours[phase][6]
 
-
+                la_pts = self.contours[phase][4]
+                ra_pts = self.contours[phase][5]
 
                 MV_pts = self.mv[self.view][str(phase)]
                 TV_pts = self.tv[self.view][str(phase)]
@@ -671,6 +677,8 @@ class SliceViewer:
                                LV_epi_pts,
                                LV_endo_pts,
                                RV_epi_pts,
+                                la_pts,
+                                ra_pts,
                                MV_pts,
                                TV_pts,
                                LVA_pts]
@@ -681,6 +689,8 @@ class SliceViewer:
                             'LAX_LV_EPICARDIAL',
                             'LAX_LV_ENDOCARDIAL',
                             'LAX_RV_EPICARDIAL',
+                            'LAX_LA',
+                            'LAX_RA',
                             'MITRAL_VALVE',
                             'TRICUSPID_VALVE',
                             'APEX_POINT']
