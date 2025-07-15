@@ -186,8 +186,10 @@ def plane_intersect(a, b):
     A = np.array([a_vec, b_vec, aXb_vec])
     d = np.array([-a[3], -b[3], 0.]).reshape(3,1)
 
-# could add np.linalg.det(A) == 0 test to prevent linalg.solve throwing error
-
-    p_inter = np.linalg.solve(A, d).T
+    try:
+        p_inter = np.linalg.solve(A, d).T
+    except np.linalg.LinAlgError:
+        # If the planes are parallel or coincident, return NaN
+        return np.nan, np.nan
 
     return p_inter[0], (p_inter + aXb_vec)[0]
