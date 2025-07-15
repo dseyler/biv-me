@@ -231,8 +231,14 @@ class GPDataSet(object):
         if np.sum(apex_index) > 0:
             self.apex = P[apex_index, :]
 
-            if len(self.apex) > 0:
+            if len(self.apex) > 1:
+                self.apex = self.apex.mean(axis=0) # if more than one point, take the centroid
+            else:
                 self.apex = self.apex[0, :]
+        else:
+            logger.error(f"No apex points for this frame! Skipping it")
+            return False
+        
         return True
     @staticmethod
     def convert_contour_types(contours):

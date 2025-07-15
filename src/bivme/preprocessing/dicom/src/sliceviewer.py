@@ -7,7 +7,7 @@ import bivme.preprocessing.dicom.src.contouring as contouring
 import bivme.preprocessing.dicom.src.guidepointprocessing as guidepointprocessing
 
 class SliceViewer:
-    def __init__(self, processed_folder, slice_info_df, view, sliceID, es_phase, num_phases, full_cycle=True):
+    def __init__(self, processed_folder, slice_info_df, view, sliceID, es_phase, num_phases, full_cycle=True, my_logger=None):
         
         self.slice_info_df = slice_info_df
         self.view = view
@@ -23,6 +23,7 @@ class SliceViewer:
         self.segmentations = self.get_segmentations()
         self.get_contours()
         self.landmarks = None
+        self.my_logger = my_logger
         
     def get_segmentations(self):
         segmentations = []
@@ -41,8 +42,8 @@ class SliceViewer:
 
         self.landmarks = {
             'SAX': {'RVI': {}},
-            '2ch': {'MV': {}},
-            '3ch': {'MV': {}, 'AV': {}},
+            '2ch': {'MV': {}, 'LVA': {}}, 
+            '3ch': {'MV': {}, 'AV': {}, 'LVA': {}},
             '4ch': {'MV': {}, 'TV': {}, 'LVA': {}},
             'RVOT': {'PV': {}}
         }
@@ -54,11 +55,13 @@ class SliceViewer:
         elif self.view == '2ch':
             for phase in self.phases:
                 self.landmarks['2ch']['MV'][f'{phase}'] = self.mv[self.view][f'{phase}']
+                self.landmarks['2ch']['LVA'][f'{phase}'] = self.lva[self.view][f'{phase}']
         
         elif self.view == '3ch':
             for phase in self.phases:
                 self.landmarks['3ch']['MV'][f'{phase}'] = self.mv[self.view][f'{phase}']
                 self.landmarks['3ch']['AV'][f'{phase}'] = self.av[self.view][f'{phase}']
+                self.landmarks['3ch']['LVA'][f'{phase}'] = self.lva[self.view][f'{phase}']
 
         elif self.view == '4ch':
             for phase in self.phases:
@@ -106,7 +109,7 @@ class SliceViewer:
         self.mv = {'2ch': {}, '3ch': {}, '4ch': {}}
         self.av = {'3ch': {}}
         self.tv = {'4ch': {}}
-        self.lva = {'4ch': {}}
+        self.lva = {'2ch': {}, '3ch': {}, '4ch': {}}
         self.pv = {'RVOT': {}}
 
         if self.view == 'SAX':
@@ -122,6 +125,11 @@ class SliceViewer:
                     self.mv['2ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 3)
                 except:
                     self.mv['2ch'][f'{phase}'] = None
+
+                try:
+                    self.lva['2ch'][f'{phase}'] = contouring.estimate_lva(self.contours[f'{phase}'][1], self.mv['2ch'][f'{phase}'][0],  self.mv['2ch'][f'{phase}'][1])
+                except:
+                    self.lva['2ch'][f'{phase}'] = None
         
         elif self.view == '3ch':
             for i, phase in enumerate(self.phases):
@@ -134,6 +142,12 @@ class SliceViewer:
                     self.av['3ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 5)
                 except:
                     self.av['3ch'][f'{phase}'] = None
+                    self.my_logger.warning(f'Aortic valve not found on 3ch slice {self.sliceID} phase {phase}')
+
+                try:
+                    self.lva['3ch'][f'{phase}'] = contouring.estimate_lva(self.contours[f'{phase}'][1], self.mv['3ch'][f'{phase}'][0],  self.mv['3ch'][f'{phase}'][1])
+                except:
+                    self.lva['3ch'][f'{phase}'] = None
 
         elif self.view == '4ch':
             for i, phase in enumerate(self.phases):
@@ -146,12 +160,12 @@ class SliceViewer:
                     self.tv['4ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 3, 5)
                 except:
                     self.tv['4ch'][f'{phase}'] = None
+                    self.my_logger.warning(f'Tricuspid valve not found on 4ch slice {self.sliceID} phase {phase}')
 
                 try:
                     self.lva['4ch'][f'{phase}'] = contouring.estimate_lva(self.contours[f'{phase}'][1], self.mv['4ch'][f'{phase}'][0],  self.mv['4ch'][f'{phase}'][1])
                 except:
                     self.lva['4ch'][f'{phase}'] = None
-                    print(f'LVA not found on slice {self.sliceID} phase {phase}')
 
         elif self.view == 'RVOT':
             for i, phase in enumerate(self.phases):
@@ -161,84 +175,7 @@ class SliceViewer:
                     self.pv['RVOT'][f'{phase}'] = None
     
         else:
-            print('View not supported for valve detection')
-    
-    def get_landmarks_from_df(self, landmarks_df):
-        self.rvi = {}
-        self.mv = {}
-        self.av = {}
-        self.tv = {}
-        self.lva = {}
-        self.pv = {}
-
-        if self.view == 'SAX':
-            SAX_df = landmarks_df[landmarks_df['View'] == 'SAX']
-            SAX_df = SAX_df[SAX_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    rvi = np.array([np.array(SAX_df['RV1'].values[i]), np.array(SAX_df['RV2'].values[i])])
-                except:
-                    rvi = None
-                self.rvi[self.view][f'{phase}'] = rvi
-
-        elif self.view == '4ch':
-            four_chamber_df = landmarks_df[landmarks_df['View'] == '4ch']
-            four_chamber_df = four_chamber_df[four_chamber_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    mv = np.array([np.array(four_chamber_df['MV1'].values[i]), np.array(four_chamber_df['MV2'].values[i])])
-                except:
-                    mv = None
-                try:
-                    tv = np.array([np.array(four_chamber_df['TV1'].values[i]), np.array(four_chamber_df['TV2'].values[i])])
-                except:
-                    tv = None
-                try:
-                    lva = np.array(four_chamber_df['LVA'].values[i])
-                except:
-                    lva = None
-
-                self.mv[self.view][f'{phase}'] = mv
-                self.tv[self.view][f'{phase}'] = tv
-                self.lva[self.view][f'{phase}'] = lva
-        
-        elif self.view == '3ch':
-            three_chamber_df = landmarks_df[landmarks_df['View'] == '3ch']
-            three_chamber_df = three_chamber_df[three_chamber_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    mv = np.array([np.array(three_chamber_df['MV1'].values[i]), np.array(three_chamber_df['MV2'].values[i])])
-                except:
-                    mv = None
-                try:
-                    av = np.array([np.array(three_chamber_df['AV1'].values[i]), np.array(three_chamber_df['AV2'].values[i])])
-                except:
-                    av = None
-                
-                self.mv[self.view][f'{phase}'] = mv
-                self.av[self.view][f'{phase}'] = av
-        
-        elif self.view == '2ch':
-            two_chamber_df = landmarks_df[landmarks_df['View'] == '2ch']
-            two_chamber_df = two_chamber_df[two_chamber_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    mv = np.array([np.array(two_chamber_df['MV1'].values[i]), np.array(two_chamber_df['MV2'].values[i])])
-                except:
-                    mv = None
-
-                self.mv[self.view][f'{phase}'] = mv
-        
-        elif self.view == 'RVOT':
-            rvot_df = landmarks_df[landmarks_df['View'] == 'RVOT']
-            rvot_df = rvot_df[rvot_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    pv = np.array([np.array(rvot_df['PV1'].values[i]), np.array(rvot_df['PV2'].values[i])])
-                except:
-                    pv = None
-
-                self.pv[self.view][f'{phase}'] = pv
+            self.my_logger.warning(f'Invalid view: {self.view}. Must be one of SAX, 2ch, 3ch, 4ch, or RVOT.')
         
     def get_contours(self):
         ## TODO: QC 
@@ -578,15 +515,18 @@ class SliceViewer:
                 la_pts = self.contours[phase][2]
 
                 MV_pts = self.mv[self.view][str(phase)]
+                LVA_pts = self.lva[self.view][str(phase)]
 
                 point_lists = [LV_endo_pts, 
                                 LV_epi_pts,
                                 MV_pts,
+                                LVA_pts,
                                 la_pts]
                 
                 labels = ['LAX_LV_ENDOCARDIAL',
                             'LAX_LV_EPICARDIAL',
                             'MITRAL_VALVE',
+                            'APEX_POINT',
                             'LAX_LA']
 
                 for i,points in enumerate(point_lists):
@@ -596,8 +536,12 @@ class SliceViewer:
                     if len(points) == 0:
                         continue
 
-                    pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
-                            for point in points]
+                    elif points.size == 2:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
+
+                    else:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
+                                for point in points]
                     
                     # Write to file
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
@@ -616,6 +560,7 @@ class SliceViewer:
 
                 MV_pts = self.mv[self.view][str(phase)]
                 AV_pts = self.av[self.view][str(phase)]
+                LVA_pts = self.lva[self.view][str(phase)]
 
                 point_lists = [RV_fw_pts,
                                RV_epi_pts,
@@ -625,7 +570,8 @@ class SliceViewer:
                                RV_epi_pts,
                                la_pts,
                                MV_pts,
-                               AV_pts]
+                               AV_pts,
+                               LVA_pts]
                 
                 labels = ['LAX_RV_FREEWALL',
                             'LAX_RV_EPICARDIAL',
@@ -635,7 +581,8 @@ class SliceViewer:
                             'LAX_RV_EPICARDIAL',
                             'LAX_LA',
                             'MITRAL_VALVE',
-                            'AORTA_VALVE']
+                            'AORTA_VALVE',
+                            'APEX_POINT']
 
                 for i,points in enumerate(point_lists):
                     if points is None:
@@ -644,8 +591,12 @@ class SliceViewer:
                     if len(points)== 0:
                         continue
 
-                    pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
-                            for point in points]
+                    elif points.size == 2:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
+
+                    else:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
+                                for point in points]
                     
                     # Write to file
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=1.0)

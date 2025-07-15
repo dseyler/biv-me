@@ -157,7 +157,7 @@ def contour_SAX(segmentation):
         RV_fw_pts = RV_endo_pts
     
 
-    # # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
+    # Get intersection points between RV epi and RV endo to remove extraneous RV epi points
     if len(RV_epi_pts)>0 and len(RV_fw_pts)>0:
         pairs = get_intersections(RV_epi_pts, RV_fw_pts, distance_cutoff=8)
 
@@ -187,6 +187,15 @@ def contour_SAX(segmentation):
         if len(pairs) > 0:
             RV_epi_pts = np.array([pnt.tolist() for i, pnt in enumerate(RV_epi_pts) if i not in np.unique(pairs[:,0])], 
                                 dtype=np.int64)
+            
+    # Compare centroids of LV endo and LV myo, if they are too far apart, segmentation is likely broken, so exclude both sets of points
+    if len(LV_endo_pts) > 0 and len(LV_myo_pts) > 0:
+        lv_endo_centroid = np.mean(LV_endo_pts, axis=0)
+        lv_myo_centroid = np.mean(LV_myo_pts, axis=0)
+
+        if np.linalg.norm(lv_endo_centroid - lv_myo_centroid) > 5:
+            LV_endo_pts = []
+            LV_epi_pts = []
             
     # If there are no lv endo points, remove the lv epi points
     if len(LV_endo_pts) == 0:
