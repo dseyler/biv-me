@@ -128,14 +128,17 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             conf = image_row[f'{image_row["Predicted View"].values[0]} confidence'].values[0]
             vote_share = image_row['Vote Share'].values[0]
 
+            description = image_row['Series Description'].values[0]
+            location = image_row['Slice Location'].values[0]
+
             # Scenario 1: Metadata and image-based predictions agree on view type. We trust the image-based prediction.
             if metadata_pred_type == image_pred_type:
                 if conf < CONFIDENCE_THRESHOLD:
                     my_logger.warning(f"Low confidence for series {series} with image based prediction ({image_pred}). Metadata-based prediction is {metadata_pred_type}.") # TODO: Remove after debugging
-                view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
+                view_predictions_array.append([series, description, location, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
 
             # Scenario 2: Metadata and image-based predictions disagree on view type. We use the metadata-based prediction to correct the image-based prediction
-            elif (metadata_pred_type == 'SAX' and image_pred_type == 'LAX') or (metadata_pred_type == 'LAX' and image_pred_type == 'SAX'): 
+            elif (metadata_pred_type == 'SAX' and image_pred_type != 'SAX') or (metadata_pred_type == 'LAX' and image_pred_type != 'LAX'): 
                 my_logger.warning(f'Series {series} metadata and image-based predictions conflict: {metadata_pred_type} ({metadata_pred_type}) vs {image_pred} ({image_pred_type}). Using metadata-based prediction to correct image-based prediction...') # TODO: Remove after debugging
                 # Zero out the confidence of the incorrect categories
                 confidences = []
@@ -148,12 +151,16 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
                 image_pred = list(refinement_map.keys())[np.argmax(confidences)]
                 conf = image_row[f'{image_pred} confidence'].values[0]
                 vote_share = 0
-                view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
+                view_predictions_array.append([series, description, location, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
+
+            elif (metadata_pred_type == 'Outflow' and image_pred_type != 'Outflow'):
+                my_logger.warning(f'Series {series} metadata and image-based predictions conflict: {metadata_pred_type} ({metadata_pred_type}) vs {image_pred} ({image_pred_type}). Using image-based prediction...')
+                view_predictions_array.append([series, description, location, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
 
             elif conf < CONFIDENCE_THRESHOLD:
                 my_logger.warning(f"Low confidence for series {series} with image based prediction ({image_pred}). Metadata-based prediction is {metadata_pred_type}.")
                 
-        view_predictions = pd.DataFrame(view_predictions_array, columns=['Series Number', 'Predicted View', 'Vote Share', 'Confidence', 'Frames Per Slice'])
+        view_predictions = pd.DataFrame(view_predictions_array, columns=['Series Number', 'Series Description', 'Slice Location', 'Predicted View', 'Vote Share', 'Confidence', 'Frames Per Slice'])
         csv_path = os.path.join(dst, 'view-classification', 'view_predictions.csv')
 
         # os.remove(metadata_csv_path)
@@ -256,8 +263,12 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             conf = image_row[f'{image_row["Predicted View"].values[0]} confidence'].values[0]
             vote_share = image_row['Vote Share'].values[0]
 
-            view_predictions_array.append([series, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
-        view_predictions = pd.DataFrame(view_predictions_array, columns=['Series Number', 'Predicted View', 'Vote Share', 'Confidence', 'Frames Per Slice'])
+            description = image_row['Series Description'].values[0]
+            location = image_row['Slice Location'].values[0]
+
+            view_predictions_array.append([series, description, location, image_pred, vote_share, conf, image_row['Frames Per Slice'].values[0]])
+            
+        view_predictions = pd.DataFrame(view_predictions_array, columns=['Series Number', 'Series Description', 'Slice Location', 'Predicted View', 'Vote Share', 'Confidence', 'Frames Per Slice'])
 
         ## Flag any slices with non-matching number of phases
         # Use the SAX series as the reference for the 'right' number of phases

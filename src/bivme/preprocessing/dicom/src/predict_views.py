@@ -243,6 +243,8 @@ def predict_on_images(vs):
 
     # Determine view class of each series
     output_df = pd.DataFrame(columns=['Series Number', 
+                                      'Series Description',
+                                      'Slice Location',
                                       'Predicted View', 
                                         'Vote Share',
                                       'Frames Per Slice',
@@ -272,7 +274,13 @@ def predict_on_images(vs):
         confidences = [series_views[f'confidence_{i}'].values for i in range(10)]
         confidences = np.mean(confidences, axis=1)
 
+        # Get series description and slice location
+        series_description = vs.df[vs.df['Series Number'] == series]['Series Description'].values[0]
+        slice_location = vs.df[vs.df['Series Number'] == series]['Slice Location'].values[0]
+
         new_row = pd.DataFrame({'Series Number': [series], 
+                                'Series Description': [series_description],
+                                'Slice Location': [slice_location],
                                 'Predicted View': [list(view_label_map.keys())[predicted_view]], 
                                 'Vote Share': [view_counts[predicted_view]],
                                 'Frames Per Slice': [len(series_views)],

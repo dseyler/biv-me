@@ -86,6 +86,8 @@ class VSGUI:
 
         stringvars = []
         confidences = []
+        descriptions = []
+        locations = []
         self.series = []
 
         for i in all_imgs:
@@ -100,6 +102,12 @@ class VSGUI:
 
             confidence = vp['Confidence'].values[0]
             confidences.append(confidence)
+
+            description = vp['Series Description'].values[0]
+            descriptions.append(description)
+
+            location = vp['Slice Location'].values[0]
+            locations.append(location)
 
         self.list_of_images = []
         self.list_of_dropdowns = []
@@ -128,7 +136,7 @@ class VSGUI:
             lbl_image.anchor(tk.CENTER)
             lbl_image.grid(row=self.gridlayout[mapped_series][0], column=self.gridlayout[mapped_series][1])
 
-            Hovertip(lbl_image, f'Series {series}, Confidence: {confidences[i]:.2f}')
+            Hovertip(lbl_image, f'Series {series}, Confidence: {confidences[i]:.2f}, Description: {descriptions[i]}, Location: {locations[i]:.2f}')
 
             # Display drop down with list of different views
             # Populate with current view
