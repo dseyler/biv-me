@@ -150,7 +150,7 @@ def predict_on_metadata(vs):
         elif set(largest_set).issubset(set(intersecting_series)):   # LAX views will be the ones that intersect with every SAX view
             view_predictions.append([series, 'LAX'])
         else:
-            view_predictions.append([series, 'Outflow']) # All other views are assumed to be outflow views
+            view_predictions.append([series, 'Other'])
 
     # Save to csv
     output_df = pd.DataFrame(view_predictions, columns=['Series Number', 'View Class'])
