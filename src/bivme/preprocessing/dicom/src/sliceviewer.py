@@ -476,7 +476,7 @@ class SliceViewer:
 
         return smoothed_landmarks
 
-    def export_slice(self, output_folder, slice_mapping, smooth_landmarks=True):
+    def export_slice(self, output_folder, slice_mapping, smooth_landmarks):
         self.get_slice_info()
         os.makedirs(output_folder, exist_ok=True)
 

@@ -95,7 +95,7 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.success(f'Guide points generated successfully.')
 
     ## Step 4: Export guide points
-    export_guidepoints(dst, output, slice_dict, slice_mapping, smooth_landmarks=True)
+    export_guidepoints(dst, output, slice_dict, slice_mapping, config["contouring"]["smooth_landmarks"])
     mylogger.success(f'Guide points exported successfully.')
 
     ## Step 5: Generate HTML (optional) of guide points for visualisation
@@ -119,6 +119,10 @@ def validate_config(config, mylogger):
 
     if not (config["view-selection"]["correct_mode"] == "automatic" or config["view-selection"]["correct_mode"] == "adaptive" or config["view-selection"]["correct_mode"] == "manual"):
         mylogger.error(f'Invalid correct mode: {config["view-selection"]["correct_mode"]}. Must be "automatic", "adaptive", or "manual".')
+        sys.exit(0)
+
+    if not (config["contouring"]["smooth_landmarks"] == True or config["contouring"]["smooth_landmarks"] == False):
+        mylogger.error(f'Invalid smooth_landmarks option: {config["contouring"]["smooth_landmarks"]}. Must be true or false.')
         sys.exit(0)
 
     if not (config["output_pp"]["overwrite"] == True or config["output_pp"]["overwrite"] == False):

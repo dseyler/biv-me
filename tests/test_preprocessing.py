@@ -125,7 +125,7 @@ def test_contouring():
     assert len(slice_dict.keys()) == 1, 'Contours not generated.'
 
     # Export contours as GP files
-    export_guidepoints(test_dst, test_output, slice_dict, slice_mapping)
+    export_guidepoints(test_dst, test_output, slice_dict, slice_mapping, True)
 
     # Find the GP files
     gp_files = [f for f in os.listdir(test_output) if 'GPFile' in f]

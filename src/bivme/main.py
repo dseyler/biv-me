@@ -76,6 +76,7 @@ if __name__ == "__main__":
                       "states": str()
                       },
             "view-selection": {"option": str(), "correct_mode": str()},
+            "contouring": {"smooth_landmarks": bool()},
             "output_pp": {"overwrite": bool(), "generate_plots": bool(), "output_directory": str()},
 
             "input_fitting": {"gp_directory": str(),
@@ -119,6 +120,7 @@ if __name__ == "__main__":
         # save a copy of the config file to the output folder
         if config["output_pp"]["overwrite"] and os.path.exists(gp_dir):
             shutil.rmtree(gp_dir)
+            
         os.makedirs(gp_dir, exist_ok=True)
         shutil.copy(args.config_file, gp_dir)
 
