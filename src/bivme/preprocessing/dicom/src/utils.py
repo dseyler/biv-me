@@ -193,3 +193,21 @@ def plane_intersect(a, b):
         return np.nan, np.nan
 
     return p_inter[0], (p_inter + aXb_vec)[0]
+
+def fft(curve, harmonic_divisor=4):
+    fft_volume = np.fft.rfft(curve)
+    fft_volume[int(np.floor(len(curve)/harmonic_divisor)):] = 0
+    curve_filtered = np.fft.irfft(fft_volume)
+
+    return curve_filtered
+
+def apply_fft(curve, harmonic_divisor=4):
+    if len(curve) % 2 != 0:
+        # Append the first value to the end
+        curve = np.append(curve, curve[0])
+        curve_filtered = fft(curve, harmonic_divisor=harmonic_divisor)
+        curve_filtered = curve_filtered[:-1]  # Remove the last value to keep the length consistent
+    else:
+        curve_filtered = fft(curve, harmonic_divisor=harmonic_divisor)
+        
+    return curve_filtered

@@ -95,7 +95,7 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.success(f'Guide points generated successfully.')
 
     ## Step 4: Export guide points
-    export_guidepoints(dst, output, slice_dict, slice_mapping)
+    export_guidepoints(dst, output, slice_dict, slice_mapping, smooth_landmarks=True)
     mylogger.success(f'Guide points exported successfully.')
 
     ## Step 5: Generate HTML (optional) of guide points for visualisation
