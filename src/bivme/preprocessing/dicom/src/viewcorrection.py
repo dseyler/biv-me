@@ -61,7 +61,7 @@ class VSGUI:
             self.img_dict[img] = selected_view
             self.view_predictions.loc[self.view_predictions['Series Number'] == series, 'Predicted View'] = selected_view
 
-            self.my_logger.info(f"----- Series {series} corrected to {selected_view}.")
+            self.my_logger.info(f"----- Series {series} saved to {selected_view}.")
 
         # Save the corrected predictions to the CSV file
         self.view_predictions.to_csv(self.viewSelector.csv_path, index=False)
@@ -88,6 +88,7 @@ class VSGUI:
         confidences = []
         descriptions = []
         locations = []
+        frames = []
         self.series = []
 
         for i in all_imgs:
@@ -108,6 +109,9 @@ class VSGUI:
 
             location = vp['Slice Location'].values[0]
             locations.append(location)
+
+            frames_per_slice = vp['Frames Per Slice'].values[0]
+            frames.append(frames_per_slice)
 
         self.list_of_images = []
         self.list_of_dropdowns = []
@@ -136,7 +140,7 @@ class VSGUI:
             lbl_image.anchor(tk.CENTER)
             lbl_image.grid(row=self.gridlayout[mapped_series][0], column=self.gridlayout[mapped_series][1])
 
-            Hovertip(lbl_image, f'Series {series}, Confidence: {confidences[i]:.2f}, Description: {descriptions[i]}, Location: {locations[i]:.2f}')
+            Hovertip(lbl_image, f'Series {series}, Confidence: {confidences[i]:.2f}, Description: {descriptions[i]}, Location: {locations[i]:.2f}, Frames: {frames[i]}', hover_delay=500)
 
             # Display drop down with list of different views
             # Populate with current view
