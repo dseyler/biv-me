@@ -170,3 +170,44 @@ def from_2d_to_3d(
     p3 = p3.T
 
     return p3[0, 0], p3[0, 1], p3[0, 2]
+
+def plane_intersect(a, b):
+    """
+    a, b   4-tuples/lists
+           Ax + By +Cz + D = 0
+           A,B,C,D in order  
+
+    output: 2 points on line of intersection, np.arrays, shape (3,)
+    """
+    a_vec, b_vec = np.array(a[:3]), np.array(b[:3])
+
+    aXb_vec = np.cross(a_vec, b_vec)
+
+    A = np.array([a_vec, b_vec, aXb_vec])
+    d = np.array([-a[3], -b[3], 0.]).reshape(3,1)
+
+    try:
+        p_inter = np.linalg.solve(A, d).T
+    except np.linalg.LinAlgError:
+        # If the planes are parallel or coincident, return NaN
+        return np.nan, np.nan
+
+    return p_inter[0], (p_inter + aXb_vec)[0]
+
+def fft(curve, harmonic_divisor=4):
+    fft_volume = np.fft.rfft(curve)
+    fft_volume[int(np.floor(len(curve)/harmonic_divisor)):] = 0
+    curve_filtered = np.fft.irfft(fft_volume)
+
+    return curve_filtered
+
+def apply_fft(curve, harmonic_divisor=4):
+    if len(curve) % 2 != 0:
+        # Append the first value to the end
+        curve = np.append(curve, curve[0])
+        curve_filtered = fft(curve, harmonic_divisor=harmonic_divisor)
+        curve_filtered = curve_filtered[:-1]  # Remove the last value to keep the length consistent
+    else:
+        curve_filtered = fft(curve, harmonic_divisor=harmonic_divisor)
+        
+    return curve_filtered

@@ -1,11 +1,8 @@
 import os
 import glob
 import sys
-import shutil
-import pydicom
 import pandas as pd
 import numpy as np
-import joblib
 import torch
 import torch.nn as nn
 import torchvision
@@ -13,8 +10,9 @@ import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 from torchvision.io import read_image
 
-from bivme.preprocessing.dicom.src.utils import from_2d_to_3d
 from bivme.preprocessing.dicom.src.viewselection import ViewSelector
+from bivme.preprocessing.dicom.src.guidepointprocessing import inverse_coordinate_transformation
+from bivme.preprocessing.dicom.src.utils import plane_intersect
 
 class CustomImageDataset(Dataset):
     def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
@@ -50,88 +48,113 @@ def predict_on_metadata(vs):
         vs.my_logger.error("No series found. This means that after excluding invalid series descriptions and images with less than 10 frames, this case has no eligible cine images. Please check your input directory.")
         sys.exit(0)
 
-    view_class_map = {'SA': 'SAX', '2CH LT': '2ch', '2CH RT': '2ch-RT', '3CH': '3ch', '4CH': '4ch', 'LVOT': 'LVOT', 'RVOT': 'RVOT', 'RVOT-T': 'RVOT-T', 'SAX-atria': 'SAX-atria', 'OTHER': 'OTHER'}
+    # Create a plane for each series
+    plane_dict = {}
+    for idx, series_df in vs.df.iterrows():
+        # Extract position, orientation, spacing, and image size
+        position = series_df['Image Position Patient']
+        orientation = series_df['Image Orientation Patient']
+        spacing = series_df['Pixel Spacing']
+        image_size = series_df['Img'].shape[1:3]
 
-    metadata_model_path = os.path.join(vs.model, "ViewSelection", "metadata-based_model.joblib")
-    metadata_model = joblib.load(metadata_model_path)
+        # Create four cartesian points representing the corners of the image in 3D space
+        origin = inverse_coordinate_transformation([0, 0], position, orientation, spacing)[:3]
+        corner_1 = inverse_coordinate_transformation([image_size[0], 0], position, orientation, spacing)[:3]
+        corner_2 = inverse_coordinate_transformation([0, image_size[1]], position, orientation, spacing)[:3]
+        corner_3 = inverse_coordinate_transformation([image_size[0], image_size[1]], position, orientation, spacing)[:3]
 
-    files = [os.path.join(root, file) for root, _, files in os.walk(os.path.join(vs.dst, 'view-classification', 'temp')) for file in files if ".dcm" in file]
+        # Convert to Ax + By + Cz + D = 0 form
+        A = (corner_1[1] - origin[1]) * (corner_2[2] - origin[2]) - (corner_1[2] - origin[2]) * (corner_2[1] - origin[1])
+        B = (corner_1[2] - origin[2]) * (corner_2[0] - origin[0]) - (corner_1[0] - origin[0]) * (corner_2[2] - origin[2])
+        C = (corner_1[0] - origin[0]) * (corner_2[1] - origin[1]) - (corner_1[1] - origin[1]) * (corner_2[0] - origin[0])
+        D = -(A * origin[0] + B * origin[1] + C * origin[2])
 
-    avg_participant = [0.0, 0.0, 0.0]
-    number_of_average = 0
-    for file in files:
-        try:
-            ds = pydicom.dcmread(file)
-            p2 = [ds.Rows /2, ds.Columns /2]
-            pixel_spacing = [ds.PixelSpacing[0], ds.PixelSpacing[1]]
-            image_position = [ds.ImagePositionPatient[i] for i in range(3) ]
-            image_orientation = [ds.ImageOrientationPatient[i] for i in range(6) ]
-            x, y, z = from_2d_to_3d(p2, image_orientation, image_position, pixel_spacing)
-            avg_participant[0] += x
-            avg_participant[1] += y
-            avg_participant[2] += z
-            number_of_average += 1
-        except:
+        plane_dict[series_df['Series Number']] = {
+            'origin': origin,
+            'corner_1': corner_1,
+            'corner_2': corner_2,
+            'corner_3': corner_3,
+            'A': A,
+            'B': B,
+            'C': C,
+            'D': D,
+        }
+
+    # Find if planes intersect
+    intersection_dict = {}
+    intersection_range = 200
+
+    for series_num_a, plane_a in plane_dict.items():
+        for series_num_b, plane_b in plane_dict.items():
+            if series_num_a == series_num_b:
+                continue
+            if (series_num_a, series_num_b) in intersection_dict or (series_num_b, series_num_a) in intersection_dict:
+                continue
+            
+            centroid_a = np.mean([plane_a['origin'], plane_a['corner_1'], plane_a['corner_2'], plane_a['corner_3']], axis=0)
+            centroid_b = np.mean([plane_b['origin'], plane_b['corner_1'], plane_b['corner_2'], plane_b['corner_3']], axis=0)
+
+            point_a, point_b = plane_intersect((plane_a['A'], plane_a['B'], plane_a['C'], plane_a['D']),
+                                                (plane_b['A'], plane_b['B'], plane_b['C'], plane_b['D']))
+            
+            # Check if the intersection points are valid (not NaN)
+            if np.isnan(point_a).any() or np.isnan(point_b).any():
+                intersection_dict[(series_num_a, series_num_b)] = None
+            elif np.linalg.norm(point_a - point_b) < 1e-3:
+                # If the intersection points are the same, skip this pair
+                intersection_dict[(series_num_a, series_num_b)] = None
+            elif np.linalg.norm(point_a - centroid_a) > intersection_range and np.linalg.norm(point_b - centroid_b) > intersection_range:
+                # If the intersection points are too far from the centroids of their respective series, skip this pair
+                intersection_dict[(series_num_a, series_num_b)] = None
+            else:
+                intersection_dict[(series_num_a, series_num_b)] = (point_a, point_b)
+    
+    # Simplify
+    simplified_intersection_dict = {}
+    for (series_num_a, series_num_b), points in intersection_dict.items():
+        if points is None:
             continue
-
-    if number_of_average == 0:
-        return
-
-    avg_participant[0] = avg_participant[0] / number_of_average
-    avg_participant[1] = avg_participant[1] / number_of_average
-    avg_participant[2] = avg_participant[2] / number_of_average
-
-    sids = [n for n in os.listdir(os.path.join(vs.dst,  'view-classification', 'temp'))]
-
-    output_dataframe = []
-    for ids in sids:
-        dcm = [n for n in os.listdir(os.path.join(vs.dst, 'view-classification', 'temp', ids)) if 'dcm' in n]
-
-        ds = pydicom.dcmread(os.path.join(vs.dst, 'view-classification', 'temp', ids, dcm[0]))
-
-        p2 = [ds.Rows /2, ds.Columns /2]
-        pixel_spacing = [ds.PixelSpacing[0], ds.PixelSpacing[1]]
-        image_position = [ds.ImagePositionPatient[i] for i in range(3) ]
-        image_orientation = [ds.ImageOrientationPatient[i] for i in range(6) ]
-        x, y, z = from_2d_to_3d(p2, image_orientation, image_position, pixel_spacing)
-
-        my_vector = np.array([avg_participant[0] - x, 
-                                avg_participant[1] - y,
-                                avg_participant[2] - z])
-        magnitude = np.linalg.norm(my_vector)
-        normalized_vector = my_vector / magnitude
-
-        predictors = np.array([float(ds.EchoTime),  
-                                    float(ds.ImageOrientationPatient[0]), 
-                                    float(ds.ImageOrientationPatient[1]), 
-                                    float(ds.ImageOrientationPatient[2]), 
-                                    float(ds.ImageOrientationPatient[3]), 
-                                    float(ds.ImageOrientationPatient[4]), 
-                                    float(ds.ImageOrientationPatient[5]), 
-                                    float(normalized_vector[0]), 
-                                    float(normalized_vector[1]), 
-                                    float(normalized_vector[2]),   
-                                    float(ds.ImagePositionPatient[0]), 
-                                    float(ds.ImagePositionPatient[1]), 
-                                    float(ds.ImagePositionPatient[2]),           
-                                    float(ds.RepetitionTime),
-                                    float(ds.SliceThickness)])
         
-        scaler = metadata_model.scaler
-        scaled_predictors = scaler.transform(predictors.reshape(1, -1))
+        if series_num_a not in simplified_intersection_dict:
+            simplified_intersection_dict[series_num_a] = [series_num_b]
+        else:
+            simplified_intersection_dict[series_num_a].append(series_num_b)
 
-        y_pred = metadata_model.predict(scaled_predictors)
-        predicted_view = view_class_map[y_pred[0]]     
+        # And then add the reverse
+        if series_num_b not in simplified_intersection_dict:
+            simplified_intersection_dict[series_num_b] = [series_num_a]
+        else:
+            simplified_intersection_dict[series_num_b].append(series_num_a)
+    
+    # Cluster into groups that intersect with the same slices
+    groups = []
+    all_series_nums = set(simplified_intersection_dict.keys())
 
-        series_num = ids.split('_')[0]
-        output_dataframe.append([series_num, predicted_view, 1, len(dcm)])
+    for series_num, intersecting_series in simplified_intersection_dict.items():
+        group = []
+
+        for s in all_series_nums:
+            if s not in intersecting_series:
+                group.append(s)
+
+        groups.append(sorted(group))
+    
+    group_sets = set(tuple(group) for group in groups)
+    largest_set = max(group_sets, key=len)
+
+    view_predictions = []
+
+    for series, intersecting_series in simplified_intersection_dict.items():
+        if series in largest_set:     # Largest set of non-intersecting series assumed to be SAX
+            view_predictions.append([series, 'SAX'])
+        elif set(largest_set).issubset(set(intersecting_series)):   # LAX views will be the ones that intersect with every SAX view
+            view_predictions.append([series, 'LAX'])
+        else:
+            view_predictions.append([series, 'Other'])
 
     # Save to csv
-    output_df = pd.DataFrame(output_dataframe, columns=['Series Number', 'Predicted View', 'Confidence', 'Frames Per Slice'])
+    output_df = pd.DataFrame(view_predictions, columns=['Series Number', 'View Class'])
     output_df.to_csv(vs.csv_path, mode='w', index=False)
-
-    # delete temp folder
-    shutil.rmtree(os.path.join(vs.dst, 'view-classification', 'temp'))
 
 def predict_on_images(vs):
     vs.prepare_data_for_prediction()
@@ -220,6 +243,8 @@ def predict_on_images(vs):
 
     # Determine view class of each series
     output_df = pd.DataFrame(columns=['Series Number', 
+                                      'Series Description',
+                                      'Slice Location',
                                       'Predicted View', 
                                         'Vote Share',
                                       'Frames Per Slice',
@@ -249,7 +274,13 @@ def predict_on_images(vs):
         confidences = [series_views[f'confidence_{i}'].values for i in range(10)]
         confidences = np.mean(confidences, axis=1)
 
+        # Get series description and slice location
+        series_description = vs.df[vs.df['Series Number'] == series]['Series Description'].values[0]
+        slice_location = vs.df[vs.df['Series Number'] == series]['Slice Location'].values[0]
+
         new_row = pd.DataFrame({'Series Number': [series], 
+                                'Series Description': [series_description],
+                                'Slice Location': [slice_location],
                                 'Predicted View': [list(view_label_map.keys())[predicted_view]], 
                                 'Vote Share': [view_counts[predicted_view]],
                                 'Frames Per Slice': [len(series_views)],

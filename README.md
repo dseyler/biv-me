@@ -1,10 +1,7 @@
 <div align="center">
 
-### 25th June, 2025: v1.1.4 patch released
-Minor patch to address issues related to preprocessing of DICOMs with non-unique file names. 
-
-### 13th June, 2025: v1.1.3 released with view correction GUI
-We have added a GUI for interactively correcting view predictions during preprocessing. Check out the new config file structure at `src/bivme/configs/config.toml` for the new options available for view selection.
+### 28th July, 2025: [v1.1.5 update - improved view selection & smoother landmarks](https://github.com/UOA-Heart-Mechanics-Research/biv-me/releases/tag/v1.1.5)
+Update significantly improves view selection by overhauling metadata-based prediction, and adds new config option for more temporally consistent landmarks.
 
 ### 4th June, 2025: [New v1.1 deep learning models for view selection and segmentation are available!](https://github.com/UOA-Heart-Mechanics-Research/biv-me-dl-models) 
 Refer to the [FAQs](#faqs) on how to update your models.

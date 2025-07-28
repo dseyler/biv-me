@@ -115,7 +115,8 @@ class ViewSelector:
         try:
             instance_number = int(ds.get("InstanceNumber","NA"))
         except ValueError:
-            self.my_logger.warning(f"InstanceNumber for {dicom_loc} is not an integer.")
+            if self.show_warnings:
+                self.my_logger.warning(f"InstanceNumber for {dicom_loc} is not an integer.")
             instance_number = ds.get("InstanceNumber","NA")
 
         series_instance_uid = ds.get("SeriesInstanceUID","NA")
@@ -123,15 +124,22 @@ class ViewSelector:
         try:
             series_number = int(ds.get('SeriesNumber', 'NA'))
         except ValueError:
-            self.my_logger.warning(f"SeriesNumber for {dicom_loc} is not an integer.")
+            if self.show_warnings:
+                self.my_logger.warning(f"SeriesNumber for {dicom_loc} is not an integer.")
             series_number = ds.get('SeriesNumber', 'NA')
 
         image_position_patient = ds.get("ImagePositionPatient", 'NA')
         image_orientation_patient = ds.get("ImageOrientationPatient", 'NA')
         pixel_spacing = ds.get("PixelSpacing", 'NA')
+
         echo_time = ds.get("EchoTime", 'NA')
         repetition_time = ds.get("RepetitionTime", 'NA')
-        trigger_time = ds.get('TriggerTime', 'NA')
+
+        try:
+            trigger_time = float(ds.get('TriggerTime', 'NA'))
+        except ValueError:
+            trigger_time = ds.get('TriggerTime', 'NA')
+
         image_dimension = [ds.get('Rows', 'NA'), ds.get('Columns', 'NA')]
         slice_thickness = ds.get('SliceThickness', 'NA')
         slice_location = ds.get('SliceLocation', 'NA')
@@ -188,12 +196,6 @@ class ViewSelector:
         output = []
         unique_series = self.df[['Series Number']].drop_duplicates()
 
-        # self.my_logger.info(f"{len(unique_series)} unique series found")
-        count = 0
-
-        if self.type == "metadata":
-            os.makedirs(os.path.join(self.dst, 'view-classification', 'temp'), exist_ok=True)
-
         max_series_num = self.df['Series Number'].max()
 
         for _, row in unique_series.iterrows():
@@ -227,7 +229,11 @@ class ViewSelector:
                 
                 for i in range(0,num_merged_series):
                     series_rows_split = series_rows[series_rows['Image Position Patient'] == unique_image_positions[i]]
-                    series_rows_split = series_rows_split.sort_values('Trigger Time')
+
+                    try:
+                        series_rows_split = series_rows_split.sort_values('Trigger Time')
+                    except TypeError:
+                        series_rows_split = series_rows_split.sort_values('Instance Number')
 
                     series_num = max_series_num + i + 1 # New series number ('fake' series number)
 
@@ -235,8 +241,14 @@ class ViewSelector:
                         if self.show_warnings:
                             self.my_logger.warning(f"Removing series {series_num} - less than 10 frames")
                         continue
+                    
+                    try:
+                        img = np.stack(series_rows_split['Img'].values, axis=0)
+                    except ValueError:
+                        if self.show_warnings:
+                            self.my_logger.warning(f"Could not stack images for series {series_num}. Skipping...")
+                        continue
 
-                    img = np.stack(series_rows_split['Img'].values, axis=0)
                     num_phases = img.shape[0]
 
                     # slice specific dicom information
@@ -245,29 +257,31 @@ class ViewSelector:
                     pixel_spacing = series_rows_split['Pixel Spacing'].values[0]
                     slice_location = series_rows_split['Slice Location'].values[0]
 
+                    if type(pixel_spacing) is str or type(image_position_patient) is str or type(image_orientation_patient) is str:
+                        if self.show_warnings:
+                            self.my_logger.warning(f"Invalid cartesian transform metadata for series {series_num}. Skipping...")
+                        continue
+
                     # Add to output
                     output.append([patient_id, filename, modality, series_instance_uid, series_num, image_position_patient, image_orientation_patient, pixel_spacing, 
                                    slice_location, img, num_phases, series_description])
-
-                    if self.type == "metadata":
-                        key = f'{series_num}_{image_position_patient[2]}'
-                        dcm_path = os.path.join(self.dst, 'view-classification', 'temp',key)
-                        os.makedirs(dcm_path, exist_ok=True) 
-
-                        count = 0
-                        for name in series_rows_split['Filename']:
-                            num = int(series_rows_split['Trigger Time'].values[count])
-                            shutil.copy(name, dcm_path / Path(f'{num:05}.dcm')) 
-                            count += 1
-
-                        self.sorted_dict[key] = series_rows_split
                         
                 # Update max series number
                 max_series_num += num_merged_series
 
             else:
-                series_rows = series_rows.sort_values('Trigger Time')
-                img = np.stack(series_rows['Img'].values, axis=0)
+                try:
+                    series_rows = series_rows.sort_values('Trigger Time')
+                except TypeError:
+                    series_rows = series_rows.sort_values('Instance Number')
+
+                try:
+                    img = np.stack(series_rows['Img'].values, axis=0)
+                except ValueError:
+                    if self.show_warnings:
+                        self.my_logger.warning(f"Could not stack images for series {series}. Skipping...")
+                    continue
+
                 num_phases = img.shape[0]
 
                 # slice specific dicom information
@@ -276,26 +290,15 @@ class ViewSelector:
                 pixel_spacing = series_rows['Pixel Spacing'].values[0]
                 slice_location = series_rows['Slice Location'].values[0]
 
+                if type(pixel_spacing) is str or type(image_position_patient) is str or type(image_orientation_patient) is str:
+                    if self.show_warnings:
+                        self.my_logger.warning(f"Invalid cartesian transform metadata for series {series}. Skipping...")
+                    continue
+
                 # Add to output
                 output.append([patient_id, filename, modality, series_instance_uid, series, image_position_patient, image_orientation_patient, pixel_spacing, 
                                slice_location, img, num_phases, series_description])
 
-                if self.type == "metadata":
-                    key = f'{series_rows["Series Number"].values[0]}_{image_position_patient[2]}'
-                    dcm_path = os.path.join(self.dst, 'view-classification', 'temp',key)
-                    os.makedirs(dcm_path, exist_ok=True) 
-
-                    count = 0
-                    for name in series_rows['Filename']:
-                        try:
-                            num = int(series_rows['Trigger Time'].values[count])
-                        except ValueError:
-                            self.my_logger.warning(f"Trigger Time for {name} is not an integer.")
-                            num = count  # Use count as fallback
-                        shutil.copy(name, dcm_path / Path(f'{num:05}.dcm')) 
-                        count += 1
-
-                    self.sorted_dict[key] = series_rows
 
         # generated pandas dataframe to store information from headers
         self.df = pd.DataFrame(sorted(output), columns=['Patient ID',

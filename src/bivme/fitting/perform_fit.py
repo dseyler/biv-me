@@ -308,8 +308,17 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
 
                 output_folder_html = Path(output_folder, f"html{gp_suffix}")
                 output_folder_html.mkdir(exist_ok=True)
+
+                figure = go.Figure(data=data)
+
+                figure.update_layout(
+                    paper_bgcolor='white',                
+                    title=f"Model and guidepoints for {case} - Frame {num:03}",
+                )
+                figure.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False)
+
                 plot(
-                    go.Figure(data),
+                    figure,
                     filename=os.path.join(
                         output_folder_html, f"{case}_fitted_model_frame_{num:03}.html"
                     ),

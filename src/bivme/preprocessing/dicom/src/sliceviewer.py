@@ -5,9 +5,10 @@ import numpy as np
 
 import bivme.preprocessing.dicom.src.contouring as contouring
 import bivme.preprocessing.dicom.src.guidepointprocessing as guidepointprocessing
+import bivme.preprocessing.dicom.src.utils as utils
 
 class SliceViewer:
-    def __init__(self, processed_folder, slice_info_df, view, sliceID, es_phase, num_phases, full_cycle=True):
+    def __init__(self, processed_folder, slice_info_df, view, sliceID, es_phase, num_phases, full_cycle=True, my_logger=None):
         
         self.slice_info_df = slice_info_df
         self.view = view
@@ -23,6 +24,7 @@ class SliceViewer:
         self.segmentations = self.get_segmentations()
         self.get_contours()
         self.landmarks = None
+        self.my_logger = my_logger
         
     def get_segmentations(self):
         segmentations = []
@@ -41,8 +43,8 @@ class SliceViewer:
 
         self.landmarks = {
             'SAX': {'RVI': {}},
-            '2ch': {'MV': {}},
-            '3ch': {'MV': {}, 'AV': {}},
+            '2ch': {'MV': {}, 'LVA': {}}, 
+            '3ch': {'MV': {}, 'AV': {}, 'LVA': {}},
             '4ch': {'MV': {}, 'TV': {}, 'LVA': {}},
             'RVOT': {'PV': {}}
         }
@@ -54,11 +56,13 @@ class SliceViewer:
         elif self.view == '2ch':
             for phase in self.phases:
                 self.landmarks['2ch']['MV'][f'{phase}'] = self.mv[self.view][f'{phase}']
+                self.landmarks['2ch']['LVA'][f'{phase}'] = self.lva[self.view][f'{phase}']
         
         elif self.view == '3ch':
             for phase in self.phases:
                 self.landmarks['3ch']['MV'][f'{phase}'] = self.mv[self.view][f'{phase}']
                 self.landmarks['3ch']['AV'][f'{phase}'] = self.av[self.view][f'{phase}']
+                self.landmarks['3ch']['LVA'][f'{phase}'] = self.lva[self.view][f'{phase}']
 
         elif self.view == '4ch':
             for phase in self.phases:
@@ -72,41 +76,13 @@ class SliceViewer:
 
         return self.landmarks
 
-    def update_landmarks(self, landmarks_df):
-        self.get_landmarks_from_df(landmarks_df)
-
-        self.landmarks = {}
-
-        if self.view == 'SAX':
-            for phase in self.phases:
-                self.landmarks['SAX']['RVI'][f'{phase}'] = self.rvi[self.view][f'{phase}']
-
-        elif self.view == 'RVOT':
-            for phase in self.phases:
-                self.landmarks['RVOT']['PV'][f'{phase}'] = self.pv[self.view][f'{phase}']
-
-        elif self.view == '2ch':
-            for phase in self.phases:
-                self.landmarks['2ch']['MV'][f'{phase}'] = self.mv[self.view][f'{phase}']
-
-        elif self.view == '3ch':
-            for phase in self.phases:
-                self.landmarks['3ch']['MV'][f'{phase}'] = self.mv[self.view][f'{phase}']
-                self.landmarks['3ch']['AV'][f'{phase}'] = self.av[self.view][f'{phase}']
-
-        elif self.view == '4ch':
-            for phase in self.phases:
-                self.landmarks['4ch']['MV'][f'{phase}'] = self.mv[self.view][f'{phase}']
-                self.landmarks['4ch']['TV'][f'{phase}'] = self.tv[self.view][f'{phase}']
-                self.landmarks['4ch']['LVA'][f'{phase}'] = self.lva[self.view][f'{phase}']
-
     def get_landmarks_from_intersections(self):
 
         self.rvi = {'SAX': {}}
         self.mv = {'2ch': {}, '3ch': {}, '4ch': {}}
         self.av = {'3ch': {}}
         self.tv = {'4ch': {}}
-        self.lva = {'4ch': {}}
+        self.lva = {'2ch': {}, '3ch': {}, '4ch': {}}
         self.pv = {'RVOT': {}}
 
         if self.view == 'SAX':
@@ -122,6 +98,11 @@ class SliceViewer:
                     self.mv['2ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 3)
                 except:
                     self.mv['2ch'][f'{phase}'] = None
+
+                try:
+                    self.lva['2ch'][f'{phase}'] = contouring.estimate_lva(self.contours[f'{phase}'][1], self.mv['2ch'][f'{phase}'][0],  self.mv['2ch'][f'{phase}'][1])
+                except:
+                    self.lva['2ch'][f'{phase}'] = None
         
         elif self.view == '3ch':
             for i, phase in enumerate(self.phases):
@@ -134,6 +115,12 @@ class SliceViewer:
                     self.av['3ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 5)
                 except:
                     self.av['3ch'][f'{phase}'] = None
+                    self.my_logger.warning(f'Aortic valve not found on 3ch slice {self.sliceID} phase {phase}')
+
+                try:
+                    self.lva['3ch'][f'{phase}'] = contouring.estimate_lva(self.contours[f'{phase}'][1], self.mv['3ch'][f'{phase}'][0],  self.mv['3ch'][f'{phase}'][1])
+                except:
+                    self.lva['3ch'][f'{phase}'] = None
 
         elif self.view == '4ch':
             for i, phase in enumerate(self.phases):
@@ -146,12 +133,12 @@ class SliceViewer:
                     self.tv['4ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 3, 5)
                 except:
                     self.tv['4ch'][f'{phase}'] = None
+                    self.my_logger.warning(f'Tricuspid valve not found on 4ch slice {self.sliceID} phase {phase}')
 
                 try:
                     self.lva['4ch'][f'{phase}'] = contouring.estimate_lva(self.contours[f'{phase}'][1], self.mv['4ch'][f'{phase}'][0],  self.mv['4ch'][f'{phase}'][1])
                 except:
                     self.lva['4ch'][f'{phase}'] = None
-                    print(f'LVA not found on slice {self.sliceID} phase {phase}')
 
         elif self.view == 'RVOT':
             for i, phase in enumerate(self.phases):
@@ -161,84 +148,7 @@ class SliceViewer:
                     self.pv['RVOT'][f'{phase}'] = None
     
         else:
-            print('View not supported for valve detection')
-    
-    def get_landmarks_from_df(self, landmarks_df):
-        self.rvi = {}
-        self.mv = {}
-        self.av = {}
-        self.tv = {}
-        self.lva = {}
-        self.pv = {}
-
-        if self.view == 'SAX':
-            SAX_df = landmarks_df[landmarks_df['View'] == 'SAX']
-            SAX_df = SAX_df[SAX_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    rvi = np.array([np.array(SAX_df['RV1'].values[i]), np.array(SAX_df['RV2'].values[i])])
-                except:
-                    rvi = None
-                self.rvi[self.view][f'{phase}'] = rvi
-
-        elif self.view == '4ch':
-            four_chamber_df = landmarks_df[landmarks_df['View'] == '4ch']
-            four_chamber_df = four_chamber_df[four_chamber_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    mv = np.array([np.array(four_chamber_df['MV1'].values[i]), np.array(four_chamber_df['MV2'].values[i])])
-                except:
-                    mv = None
-                try:
-                    tv = np.array([np.array(four_chamber_df['TV1'].values[i]), np.array(four_chamber_df['TV2'].values[i])])
-                except:
-                    tv = None
-                try:
-                    lva = np.array(four_chamber_df['LVA'].values[i])
-                except:
-                    lva = None
-
-                self.mv[self.view][f'{phase}'] = mv
-                self.tv[self.view][f'{phase}'] = tv
-                self.lva[self.view][f'{phase}'] = lva
-        
-        elif self.view == '3ch':
-            three_chamber_df = landmarks_df[landmarks_df['View'] == '3ch']
-            three_chamber_df = three_chamber_df[three_chamber_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    mv = np.array([np.array(three_chamber_df['MV1'].values[i]), np.array(three_chamber_df['MV2'].values[i])])
-                except:
-                    mv = None
-                try:
-                    av = np.array([np.array(three_chamber_df['AV1'].values[i]), np.array(three_chamber_df['AV2'].values[i])])
-                except:
-                    av = None
-                
-                self.mv[self.view][f'{phase}'] = mv
-                self.av[self.view][f'{phase}'] = av
-        
-        elif self.view == '2ch':
-            two_chamber_df = landmarks_df[landmarks_df['View'] == '2ch']
-            two_chamber_df = two_chamber_df[two_chamber_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    mv = np.array([np.array(two_chamber_df['MV1'].values[i]), np.array(two_chamber_df['MV2'].values[i])])
-                except:
-                    mv = None
-
-                self.mv[self.view][f'{phase}'] = mv
-        
-        elif self.view == 'RVOT':
-            rvot_df = landmarks_df[landmarks_df['View'] == 'RVOT']
-            rvot_df = rvot_df[rvot_df['Slice ID'] == self.sliceID]
-            for i, phase in enumerate(self.phases):
-                try:
-                    pv = np.array([np.array(rvot_df['PV1'].values[i]), np.array(rvot_df['PV2'].values[i])])
-                except:
-                    pv = None
-
-                self.pv[self.view][f'{phase}'] = pv
+            self.my_logger.warning(f'Invalid view: {self.view}. Must be one of SAX, 2ch, 3ch, 4ch, or RVOT.')
         
     def get_contours(self):
         ## TODO: QC 
@@ -479,19 +389,112 @@ class SliceViewer:
                 RV_septal = np.delete(RV_septal, del_idx, axis=0)
                 self.contours[str(phase)][1] = RV_septal
 
-
     def get_slice_info(self):
         self.imgPos = self.slice['ImagePositionPatient'].values[0]
         self.imgOrient = self.slice['ImageOrientationPatient'].values[0]
         self.ps = self.slice['Pixel Spacing'].values[0]
 
-    def export_slice(self, output_folder, slice_mapping):
+
+    def smooth_landmarks(self, landmarks):
+        # Smooth landmarks by applying an low pass filter
+        # Firstly, check if any of the landmarks are flipped across the cycle
+        if np.any([x is None for x in landmarks]):
+            return landmarks # No smoothing if there are missing landmarks
+        
+        l1 = np.array([x[0] for x in landmarks])
+        l2 = np.array([x[1] for x in landmarks])
+
+        true_l1 = []
+        true_l2 = []
+
+        # # Take the ED orientation as the true orientation
+        l1_ed = l1[0]
+        l2_ed = l2[0]
+
+        for m, n in zip(l1, l2):
+            if np.all(m == l1_ed) and np.all(n == l2_ed):
+                # If the landmark is the same as the ED landmark, keep it
+                true_l1.append(m)
+                true_l2.append(n)
+
+            else:
+                # Check if the landmark is flipped
+                if np.linalg.norm(m - previous_l1) > np.linalg.norm(n - previous_l1) or np.linalg.norm(n - previous_l2) > np.linalg.norm(m - previous_l2):
+                    # If it is flipped, correct the orientation
+                    true_l1.append(n)
+                    true_l2.append(m)
+                else:
+                    true_l1.append(m)
+                    true_l2.append(n)
+
+            previous_l1 = true_l1[-1]
+            previous_l2 = true_l2[-1]
+        
+        true_l1 = np.array(true_l1)
+        true_l2 = np.array(true_l2)
+
+        # Smooth the landmarks using a low pass filter
+        harmonic_divisor = 4 # Low pass filter will keep num_phases/harmonic_divisor harmonics. E.g. if you have 30 frames and harmonic_divisor=4, it will keep the first 7 harmonics.
+
+        l1_x = np.array([x[0] for x in true_l1])
+        l1_y = np.array([x[1] for x in true_l1])
+        l2_x = np.array([x[0] for x in true_l2])
+        l2_y = np.array([x[1] for x in true_l2])
+
+        l1_x_smooth = utils.apply_fft(l1_x, harmonic_divisor=harmonic_divisor)
+        l1_y_smooth = utils.apply_fft(l1_y, harmonic_divisor=harmonic_divisor)
+        l2_x_smooth = utils.apply_fft(l2_x, harmonic_divisor=harmonic_divisor)
+        l2_y_smooth = utils.apply_fft(l2_y, harmonic_divisor=harmonic_divisor)
+
+        l1_smooth = np.array([l1_x_smooth, l1_y_smooth]).T
+        l2_smooth = np.array([l2_x_smooth, l2_y_smooth]).T
+
+        # Reconstruct the landmarks
+        smoothed_landmarks = []
+        for i in range(len(l1_smooth)):
+            if np.isnan(l1_smooth[i]).any() or np.isnan(l2_smooth[i]).any():
+                smoothed_landmarks.append(None)
+            else:
+                smoothed_landmarks.append(np.array([l1_smooth[i], l2_smooth[i]]))
+
+        return smoothed_landmarks
+    
+    def smooth_LVA(self, landmarks):
+        # No need to correct for orientation, so just smooth
+        harmonic_divisor = 4 # Low pass filter will keep num_phases/harmonic_divisor harmonics. E.g. if you have 30 frames and harmonic_divisor=4, it will keep the first 7 harmonics.
+
+        l_x = np.array([x[0] for x in landmarks])
+        l_y = np.array([x[1] for x in landmarks])
+
+        l_x_smooth = utils.apply_fft(l_x, harmonic_divisor=harmonic_divisor)
+        l_y_smooth = utils.apply_fft(l_y, harmonic_divisor=harmonic_divisor)
+
+        l_smooth = np.array([l_x_smooth, l_y_smooth]).T
+
+        # Reconstruct the landmarks
+        smoothed_landmarks = [l_smooth[i] if not np.isnan(l_smooth[i]).any() else None for i in range(len(l_smooth))]
+
+        return smoothed_landmarks
+
+    def export_slice(self, output_folder, slice_mapping, smooth_landmarks):
         self.get_slice_info()
         os.makedirs(output_folder, exist_ok=True)
 
         self.mapped_sliceID = slice_mapping[self.sliceID]
         
         if self.view == 'SAX':
+            if smooth_landmarks:
+                # Get all landmarks
+                landmarks = [self.rvi[self.view][str(x)] for x in self.phases]
+                
+                # Smooth the landmarks
+                smoothed_landmarks = self.smooth_landmarks(landmarks)
+
+                # Write the smoothed landmarks to the rvi dict
+                self.rvi[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.rvi[self.view][str(phase)] = smoothed_landmarks[i]
+
             for phase in self.phases:
                 phase = str(phase)
 
@@ -525,7 +528,6 @@ class SliceViewer:
                         continue
                         
                     # Invert points first due to initial transpose
-                    points = [np.flip(point) for point in points]
                     pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                             for point in points]
 
@@ -533,6 +535,18 @@ class SliceViewer:
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
 
         elif self.view == 'RVOT':
+            if smooth_landmarks:
+                # Get all landmarks
+                landmarks = [self.pv[self.view][str(x)] for x in self.phases]
+                
+                # Smooth the landmarks
+                smoothed_landmarks = self.smooth_landmarks(landmarks)
+
+                # Write the smoothed landmarks to the pv dict
+                self.pv[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.pv[self.view][str(phase)] = smoothed_landmarks[i]
+
             for phase in self.phases:
                 phase = str(phase)
 
@@ -564,15 +578,34 @@ class SliceViewer:
                     if len(points) == 0:
                         continue
 
-                    points = [np.flip(point) for point in points]
                     pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                             for point in points]
                             
                     # Write to file
-                    
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
 
         elif self.view == '2ch':
+            if smooth_landmarks:
+                ## Get MV landmarks
+                landmarks = [self.mv[self.view][str(x)] for x in self.phases]
+                
+                # Smooth the landmarks
+                smoothed_landmarks = self.smooth_landmarks(landmarks)
+
+                # Write the smoothed landmarks to the mv dict
+                self.mv[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.mv[self.view][str(phase)] = smoothed_landmarks[i]
+
+                ## Get LVA landmarks
+                landmarks = [self.lva[self.view][str(x)] for x in self.phases]
+                smoothed_landmarks = self.smooth_LVA(landmarks)
+
+                # Write the smoothed landmarks to the lva dict
+                self.lva[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.lva[self.view][str(phase)] = smoothed_landmarks[i]
+
             for phase in self.phases:
                 phase = str(phase)
 
@@ -581,14 +614,19 @@ class SliceViewer:
                 la_pts = self.contours[phase][2]
 
                 MV_pts = self.mv[self.view][str(phase)]
+                LVA_pts = self.lva[self.view][str(phase)]
 
                 point_lists = [LV_endo_pts, 
                                 LV_epi_pts,
-                                MV_pts]
+                                MV_pts,
+                                LVA_pts,
+                                la_pts]
                 
                 labels = ['LAX_LV_ENDOCARDIAL',
                             'LAX_LV_EPICARDIAL',
-                            'MITRAL_VALVE']
+                            'MITRAL_VALVE',
+                            'APEX_POINT',
+                            'LAX_LA']
 
                 for i,points in enumerate(point_lists):
                     if points is None:
@@ -597,14 +635,47 @@ class SliceViewer:
                     if len(points) == 0:
                         continue
 
-                    points = [np.flip(point) for point in points]
-                    pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
-                            for point in points]
+                    elif points.size == 2:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
+
+                    else:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
+                                for point in points]
                     
                     # Write to file
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
 
         elif self.view == '3ch':
+            if smooth_landmarks:
+                ## Get MV landmarks
+                landmarks = [self.mv[self.view][str(x)] for x in self.phases]
+                
+                # Smooth the landmarks
+                smoothed_landmarks = self.smooth_landmarks(landmarks)
+
+                # Write the smoothed landmarks to the mv dict
+                self.mv[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.mv[self.view][str(phase)] = smoothed_landmarks[i]
+
+                ## Get AV landmarks
+                landmarks = [self.av[self.view][str(x)] for x in self.phases]
+                smoothed_landmarks = self.smooth_landmarks(landmarks)
+
+                # Write the smoothed landmarks to the av dict
+                self.av[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.av[self.view][str(phase)] = smoothed_landmarks[i]
+
+                ## Get LVA landmarks
+                landmarks = [self.lva[self.view][str(x)] for x in self.phases]
+                smoothed_landmarks = self.smooth_LVA(landmarks)
+
+                # Write the smoothed landmarks to the lva dict
+                self.lva[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.lva[self.view][str(phase)] = smoothed_landmarks[i]
+
             for phase in self.phases:
                 phase = str(phase)
 
@@ -614,8 +685,11 @@ class SliceViewer:
                 RV_fw_pts = self.contours[phase][3]
                 RV_epi_pts = self.contours[phase][6]
 
+                la_pts = self.contours[phase][4]
+
                 MV_pts = self.mv[self.view][str(phase)]
                 AV_pts = self.av[self.view][str(phase)]
+                LVA_pts = self.lva[self.view][str(phase)]
 
                 point_lists = [RV_fw_pts,
                                RV_epi_pts,
@@ -623,8 +697,10 @@ class SliceViewer:
                                LV_epi_pts,
                                LV_endo_pts,
                                RV_epi_pts,
+                               la_pts,
                                MV_pts,
-                               AV_pts]
+                               AV_pts,
+                               LVA_pts]
                 
                 labels = ['LAX_RV_FREEWALL',
                             'LAX_RV_EPICARDIAL',
@@ -632,8 +708,10 @@ class SliceViewer:
                             'LAX_LV_EPICARDIAL',
                             'LAX_LV_ENDOCARDIAL',
                             'LAX_RV_EPICARDIAL',
+                            'LAX_LA',
                             'MITRAL_VALVE',
-                            'AORTA_VALVE']
+                            'AORTA_VALVE',
+                            'APEX_POINT']
 
                 for i,points in enumerate(point_lists):
                     if points is None:
@@ -642,14 +720,47 @@ class SliceViewer:
                     if len(points)== 0:
                         continue
 
-                    points = [np.flip(point) for point in points]
-                    pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
-                            for point in points]
+                    elif points.size == 2:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
+
+                    else:
+                        pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
+                                for point in points]
                     
                     # Write to file
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=1.0)
 
         elif self.view == '4ch':
+            if smooth_landmarks:
+                ## Get MV landmarks
+                landmarks = [self.mv[self.view][str(x)] for x in self.phases]
+                
+                # Smooth the landmarks
+                smoothed_landmarks = self.smooth_landmarks(landmarks)
+
+                # Write the smoothed landmarks to the mv dict
+                self.mv[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.mv[self.view][str(phase)] = smoothed_landmarks[i]
+
+                ## Get TV landmarks
+                landmarks = [self.tv[self.view][str(x)] for x in self.phases]
+                smoothed_landmarks = self.smooth_landmarks(landmarks)
+
+                # Write the smoothed landmarks to the tv dict
+                self.tv[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.tv[self.view][str(phase)] = smoothed_landmarks[i]
+
+                ## Get LVA landmarks
+                landmarks = [self.lva[self.view][str(x)] for x in self.phases]
+                smoothed_landmarks = self.smooth_LVA(landmarks)
+
+                # Write the smoothed landmarks to the lva dict
+                self.lva[self.view] = {}
+                for i, phase in enumerate(self.phases):
+                    self.lva[self.view][str(phase)] = smoothed_landmarks[i]
+
             for phase in self.phases:
                 phase = str(phase)
 
@@ -659,7 +770,8 @@ class SliceViewer:
                 RV_fw_pts = self.contours[phase][3]
                 RV_epi_pts = self.contours[phase][6]
 
-
+                la_pts = self.contours[phase][4]
+                ra_pts = self.contours[phase][5]
 
                 MV_pts = self.mv[self.view][str(phase)]
                 TV_pts = self.tv[self.view][str(phase)]
@@ -671,6 +783,8 @@ class SliceViewer:
                                LV_epi_pts,
                                LV_endo_pts,
                                RV_epi_pts,
+                                la_pts,
+                                ra_pts,
                                MV_pts,
                                TV_pts,
                                LVA_pts]
@@ -681,6 +795,8 @@ class SliceViewer:
                             'LAX_LV_EPICARDIAL',
                             'LAX_LV_ENDOCARDIAL',
                             'LAX_RV_EPICARDIAL',
+                            'LAX_LA',
+                            'LAX_RA',
                             'MITRAL_VALVE',
                             'TRICUSPID_VALVE',
                             'APEX_POINT']
@@ -693,11 +809,9 @@ class SliceViewer:
                         continue
 
                     elif points.size == 2:
-                        points = np.flip(points)
                         pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
 
                     else:
-                        points = [np.flip(point) for point in points]
                         pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                                 for point in points]
 
@@ -711,11 +825,11 @@ class SliceViewer:
 
         fig, ax = plt.subplots(2, 2, figsize=(15, 8))
         # image and segmentation for each time frame
-        ax[0, 0].imshow(self.images[0], cmap='gray')
+        # ax[0, 0].imshow(self.images[0], cmap='gray')
         ax[0, 0].imshow(self.segmentations[0], cmap='inferno', alpha=0.2)
         ax[0, 0].set_title(f'{self.view} Slice {self.sliceID} Time Frame 0')
         ax[0, 0].axis('off')
-        ax[0, 1].imshow(self.images[1], cmap='gray')
+        # ax[0, 1].imshow(self.images[1], cmap='gray')
         ax[0, 1].imshow(self.segmentations[1], cmap='inferno', alpha=0.2)
         ax[0, 1].set_title(f'{self.view} Slice {self.sliceID} Time Frame {int(self.es_phase)}')
         ax[0, 1].axis('off')
