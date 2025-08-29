@@ -5,11 +5,6 @@ import pandas as pd
 import plotly.graph_objs as go
 from pathlib import Path
 from plotly.offline import plot
-import argparse
-import pathlib
-import datetime
-import tomli
-import shutil
 import re
 import fnmatch
 from copy import deepcopy
@@ -214,11 +209,14 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
         my_logger.info(f"Fitting of {str(case)}")
 
         residuals = 0
-        with Progress(transient=True) as progress:
-            task = progress.add_task(f"Processing {len(frames_to_fit)} frames", total=len(frames_to_fit))
+        with Progress(auto_refresh=False, transient=True) as progress:
+            task = progress.add_task(f"Processing {len(frames_to_fit)} frames of {case}", total=len(frames_to_fit))
             console = progress
 
+            image_grids = {}
+
             for idx, num in enumerate(sorted(frames_to_fit)):
+                progress.refresh()
                 num = int(num)  # frame number
 
                 my_logger.info(f"Processing frame #{num}")
