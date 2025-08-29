@@ -40,7 +40,7 @@ generate_plots_fitting = true
 
 include_images = true
 # Define whether to include images in html plots (if preprocessing has been performed). This will add processing time and cause html files to become large, so use only if you want to overlay contours and/or models with images.
-# Default: false
+# Default: true
 
 #
 #
