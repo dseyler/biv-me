@@ -23,6 +23,7 @@ from bivme.fitting.diffeomorphic_fitting_utils import (
     solve_convex_problem,
     plot_timeseries,
 )
+from bivme.plotting.plot_guidepoints import plot_images
 
 from bivme.meshing.mesh_io import write_vtk_surface, export_to_obj
 from loguru import logger
@@ -50,7 +51,6 @@ contours_to_plot = [
     ContourType.LAX_RV_EPICARDIAL,
     ContourType.LAX_LV_ENDOCARDIAL,
     ContourType.LAX_LV_EPICARDIAL,
-    ContourType.LAX_RV_EPICARDIAL,
     ContourType.SAX_RV_OUTLET,
     ContourType.AORTA_PHANTOM,
     ContourType.TRICUSPID_PHANTOM,
@@ -270,7 +270,6 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                 except:
                     my_logger.warning('Error in creating aorta phantom points')
 
-                contour_plots = data_set.plot_dataset(contours_to_plot)
 
                 # Example on how to set different weights for different points group (R.B.)
                 data_set.weights[data_set.contour_type == ContourType.MITRAL_PHANTOM] = 2
@@ -299,31 +298,44 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                     my_logger,
                 ) / len(sorted(frames_to_fit))
 
-                # Plot final results
-                model = biventricular_model.plot_surface(
-                    "rgb(0,127,0)", "rgb(0,127,127)", "rgb(127,0,0)", "all"
-                )
+                if config["plotting"]["generate_plots_fitting"]:
+                    # Plot final results
+                    contour_plots = data_set.plot_dataset(contours_to_plot)
+                    model = biventricular_model.plot_surface(
+                        "rgb(0,127,0)", "rgb(0,127,127)", "rgb(127,0,0)", "all"
+                    )
 
-                data = contour_plots + model
+                    data = contour_plots + model
 
-                output_folder_html = Path(output_folder, f"html{gp_suffix}")
-                output_folder_html.mkdir(exist_ok=True)
+                    if config["plotting"]["include_images"]:
+                        image_dir = Path(config["input_pp"]["processing"]) / config["input_pp"]["batch_ID"] / os.path.basename(case) / "images"
 
-                figure = go.Figure(data=data)
+                        if not image_dir.exists():
+                            my_logger.warning(f"Image directory {image_dir} does not exist! Skipping image plotting")
 
-                figure.update_layout(
-                    paper_bgcolor='white',                
-                    title=f"Model and guidepoints for {case} - Frame {num:03}",
-                )
-                figure.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False)
+                        else:
+                            image_plots, image_grids = plot_images(image_dir, data_set, image_grids, shift_to_apply, num)
+                            data += image_plots
+                        
 
-                plot(
-                    figure,
-                    filename=os.path.join(
-                        output_folder_html, f"{case}_fitted_model_frame_{num:03}.html"
-                    ),
-                    auto_open=False,
-                )
+                    output_folder_html = Path(output_folder, f"html{gp_suffix}")
+                    output_folder_html.mkdir(exist_ok=True)
+
+                    figure = go.Figure(data=data)
+
+                    figure.update_layout(
+                        paper_bgcolor='white',                
+                        title=f"Model and guidepoints for {case} - Frame {num:03}",
+                    )
+                    figure.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False)
+
+                    plot(
+                        figure,
+                        filename=os.path.join(
+                            output_folder_html, f"{case}_fitted_model_frame_{num:03}.html"
+                        ),
+                        auto_open=False,
+                    )
 
                 # save results in .txt format, one file for each frame
                 model_data = {

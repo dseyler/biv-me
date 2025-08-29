@@ -69,20 +69,22 @@ if __name__ == "__main__":
 
             "logging": {"show_detailed_logging": bool(), "generate_log_file": bool()},
 
+            "plotting": {"generate_plots_preprocessing": bool(), "generate_plots_fitting": bool(), "include_images": bool()},
+
             "input_pp": {"source": str(),
-                      "batch_ID": str(),
-                      "analyst_id": str(),
-                      "processing": str(),
-                      "states": str()
-                      },
+                        "batch_ID": str(),
+                        "analyst_id": str(),
+                        "processing": str(),
+                        "states": str()
+                        },
             "view-selection": {"option": str(), "correct_mode": str()},
             "contouring": {"smooth_landmarks": bool()},
-            "output_pp": {"overwrite": bool(), "generate_plots": bool(), "output_directory": str()},
+            "output_pp": {"overwrite": bool(), "output_directory": str()},
 
             "input_fitting": {"gp_directory": str(),
-                      "gp_suffix": str(),
-                      "si_suffix": str(),
-                      },
+                        "gp_suffix": str(),
+                        "si_suffix": str(),
+                        },
             "breathhold_correction": {"shifting": str(), "ed_frame": int()},
             "gp_processing": {"sampling": int(), "num_of_phantom_points_av": int(), "num_of_phantom_points_mv": int(), "num_of_phantom_points_tv": int(), "num_of_phantom_points_pv": int()},
             "multiprocessing": {"workers": int()},
@@ -105,6 +107,17 @@ if __name__ == "__main__":
         sys.exit(0)
     if not (config["logging"]["generate_log_file"] == True or config["logging"]["generate_log_file"] == False):
         logger.error(f'Invalid logging option: {config["logging"]["generate_log_file"]}. Must be True or False.')
+        sys.exit(0)
+
+    # Validate plotting parameters
+    if not (config["plotting"]["generate_plots_preprocessing"] == True or config["plotting"]["generate_plots_preprocessing"] == False):
+        logger.error(f'Invalid plotting option: {config["plotting"]["generate_plots_preprocessing"]}. Must be True or False.')
+        sys.exit(0)
+    if not (config["plotting"]["generate_plots_fitting"] == True or config["plotting"]["generate_plots_fitting"] == False):
+        logger.error(f'Invalid plotting option: {config["plotting"]["generate_plots_fitting"]}. Must be True or False.')
+        sys.exit(0)
+    if not (config["plotting"]["include_images"] == True or config["plotting"]["include_images"] == False):
+        logger.error(f'Invalid plotting option: {config["plotting"]["include_images"]}. Must be True or False.')
         sys.exit(0)
     
     # Determine which cases to process

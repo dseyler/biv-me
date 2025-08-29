@@ -1,6 +1,6 @@
 
 title = "Configuration file for biv-me"
-version = "1.1.5" # for semantic versioning - Major.Minor.Patch sequence
+version = "1.1.6" # for semantic versioning - Major.Minor.Patch sequence
 # e.g software version 2.3.1 means that the software is in its second major version,
 # with three additional functionalities added, and one patch fix implemented.
 # When a developer fixes a bug in that version, the next version release is named version 2.3.2.
@@ -28,6 +28,19 @@ show_detailed_logging = true
 generate_log_file = true
 # Decide whether or not to save the log files. If true, a .log file will be generated each for preprocessing and fitting
 # Default: true
+
+[plotting]
+generate_plots_preprocessing = false
+# Define whether to generate html plots of exported contours after preprocessing (not corrected for breathhold). 
+# Default: false
+
+generate_plots_fitting = true
+# Define whether to generate html plots of models and contours during fitting (corrected for breathhold).
+# Default: true
+
+include_images = true
+# Define whether to include images in html plots (if preprocessing has been performed). This will add processing time and cause html files to become large, so use only if you want to overlay contours and/or models with images.
+# Default: false
 
 #
 #
@@ -98,10 +111,6 @@ smooth_landmarks = true
 overwrite = false
 # Define to overwrite the processed folder and outputs of an already preprocessed case, if it exists
 # Default: false
-
-generate_plots = true
-# Define whether to generate html plots of exported contours after preprocessing. 
-# Default: true
 
 output_directory = "../../example/guidepoints"
 # Define the directory where GPFiles will be created
