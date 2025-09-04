@@ -308,11 +308,17 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                     if config["plotting"]["include_images"]:
                         image_dir = Path(config["input_pp"]["processing"]) / config["input_pp"]["batch_ID"] / os.path.basename(case) / "images"
 
+                        if config["plotting"]["export_images"]:
+                            output_dir = Path(output_folder) / "images"
+                            output_dir.mkdir(exist_ok=True)
+                        else:
+                            output_dir = None
+
                         if not image_dir.exists():
                             my_logger.warning(f"Image directory {image_dir} does not exist! Skipping image plotting")
 
                         else:
-                            image_plots, image_grids = plot_images(image_dir, data_set, image_grids, shift_to_apply, num)
+                            image_plots, image_grids = plot_images(image_dir, data_set, image_grids, output_dir, shift_to_apply, num)
                             data += image_plots
                         
 

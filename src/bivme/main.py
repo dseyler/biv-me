@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
             "logging": {"show_detailed_logging": bool(), "generate_log_file": bool()},
 
-            "plotting": {"generate_plots_preprocessing": bool(), "generate_plots_fitting": bool(), "include_images": bool()},
+            "plotting": {"generate_plots_preprocessing": bool(), "generate_plots_fitting": bool(), "include_images": bool(), "export_images": bool()},
 
             "input_pp": {"source": str(),
                         "batch_ID": str(),
@@ -118,6 +118,9 @@ if __name__ == "__main__":
         sys.exit(0)
     if not (config["plotting"]["include_images"] == True or config["plotting"]["include_images"] == False):
         logger.error(f'Invalid plotting option: {config["plotting"]["include_images"]}. Must be True or False.')
+        sys.exit(0)
+    if not (config["plotting"]["export_images"] == True or config["plotting"]["export_images"] == False):
+        logger.error(f'Invalid plotting option: {config["plotting"]["export_images"]}. Must be True or False.')
         sys.exit(0)
     
     # Determine which cases to process

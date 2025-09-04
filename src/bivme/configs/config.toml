@@ -42,6 +42,10 @@ include_images = true
 # Define whether to include images in html plots (if preprocessing has been performed). This will add processing time and cause html files to become large, so use only if you want to overlay contours and/or models with images.
 # Default: true
 
+export_images = false
+# Define whether to export images in vtk format (if preprocessing has been performed). This will add processing time and take up a lot of storage space, so only use if you want to create visualisations of models and images. Images are only exported after fitting.
+# Default: false
+
 #
 #
 #

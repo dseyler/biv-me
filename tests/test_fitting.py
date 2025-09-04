@@ -20,7 +20,7 @@ def test_performed_fit():
 
             "logging": {"show_detailed_logging": bool(), "generate_log_file": bool()},
 
-            "plotting": {"generate_plots_preprocessing": bool(), "generate_plots_fitting": bool(), "include_images": bool()},
+            "plotting": {"generate_plots_preprocessing": bool(), "generate_plots_fitting": bool(), "include_images": bool(), "export_images": bool()},
 
             "input_pp": {"source": str(),
                         "batch_ID": str(),
