@@ -99,10 +99,15 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.success(f'Guide points exported successfully.')
 
     ## Step 5: Generate HTML (optional) of guide points for visualisation
-    if config["output_pp"]["generate_plots"]:
-        generate_html(output, out_dir=plotting, gp_suffix='', si_suffix='', frames_to_fit=[], my_logger=mylogger, model_path=None)
+    if config["plotting"]["generate_plots_preprocessing"]:
+        if config["plotting"]["include_images"]:
+            image_path = os.path.join(dst, 'images')  # Path to the image file for plotting
+        else:
+            image_path = None
 
-    mylogger.success(f'Guidepoints plotted at {os.path.join(plotting,case,"html")}.')
+        generate_html(output, out_dir=plotting, gp_suffix='', si_suffix='', frames_to_fit=[], my_logger=mylogger, model_path=None, image_path=image_path)
+
+        mylogger.success(f'Guidepoints plotted at {os.path.join(plotting,case,"html")}.')
 
     if config["logging"]["generate_log_file"]:
         mylogger.remove(logger_id)
@@ -127,8 +132,4 @@ def validate_config(config, mylogger):
 
     if not (config["output_pp"]["overwrite"] == True or config["output_pp"]["overwrite"] == False):
         mylogger.error(f'Invalid overwrite option: {config["output_pp"]["overwrite"]}. Must be true or false.')
-        sys.exit(0)
-
-    if not (config["output_pp"]["generate_plots"] == True or config["output_pp"]["generate_plots"] == False):
-        mylogger.error(f'Invalid generate_plots option: {config["output_pp"]["generate_plots"]}. Must be true or false.')
         sys.exit(0)

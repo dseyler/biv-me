@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import warnings
 import os
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from loguru import logger
 
 # local imports
 from . import fitting_tools as tools
@@ -11,9 +14,6 @@ import re
 from .surface_enum import *
 from bivme.fitting import surface_enum
 from bivme.fitting.Slice import Slice
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from loguru import logger
 
 SAMPLED_CONTOUR_TYPES = [
     ContourType.LAX_LV_ENDOCARDIAL,
@@ -162,7 +162,7 @@ class GPDataSet(object):
         weights = np.delete(weights, del_index)
 
         self.number_of_slice = len(self.slice_number)  # slice index starting with 0
-
+        
         self.sample_contours(points, slices, contour_types, weights, sampling)  # there are
         # too many
         # points extracted from cvi files.  To reduce computation time,
@@ -375,7 +375,9 @@ class GPDataSet(object):
 
         self.contoured_slices = np.unique(self.slice_number)
 
-        slices_to_use = [int(line[index_image_id]) -1 for line in lines]
+        # slices_to_use = [int(line[index_image_id]) -1 for line in lines]
+        slices_to_use = [num for num,line in enumerate(lines) if line[index_image_id].isdigit()]
+        
         all_positions = []
         for i in slices_to_use:
             slice_id = int(lines[i][index_image_id])

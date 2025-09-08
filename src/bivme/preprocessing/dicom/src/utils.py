@@ -8,7 +8,7 @@ def write_sliceinfofile(dst, slice_info_df):
     # Calculate a slice mapping (reformat to 1-numslices)
     slice_mapping = {}
     for i, row in slice_info_df.iterrows():
-        slice_mapping[row['Slice ID']] = i+1
+        slice_mapping[row['Slice ID']] = int(row['Slice ID'])
         
     # write to slice info file
     with open(os.path.join(dst, 'SliceInfoFile.txt'), 'w') as f:
