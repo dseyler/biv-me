@@ -1,5 +1,8 @@
 <div align="center">
 
+### 9th September, 2025: [v1.1.6 update - new visualisation tools](https://github.com/UOA-Heart-Mechanics-Research/biv-me/releases/tag/v1.1.6)
+Update adds tools to visualise images alongisde models to help visual inspection of mesh reconstruction and create eye-catching videos. 
+
 ### 28th July, 2025: [v1.1.5 update - improved view selection & smoother landmarks](https://github.com/UOA-Heart-Mechanics-Research/biv-me/releases/tag/v1.1.5)
 Update significantly improves view selection by overhauling metadata-based prediction, and adds new config option for more temporally consistent landmarks.
 
@@ -131,6 +134,9 @@ We update biv-me regularly to apply patches and add new features. Make sure to s
     - [Preprocessing DICOM data](#preprocessing-dicom-data)
     - [Fitting biv-me models](#fitting-biv-me-models)
     - [Running end-to-end pipeline](#running-end-to-end-pipeline-preprocessing-and-fitting)
+- [**Visualisation of models (and images)**](#visualisation-of-models-and-images)
+  - [Example .html plot (with images)](#example-html-plot-with-images)
+  - [Example .vtk image and model sequence](#example-vtk-image-and-model-sequence) 
 - [**Analysis of models**](#analysis-of-models)  
   - [Calculating volumes from models](#calculating-volumes-from-models)  
   - [Calculating strains from models](#calculating-strains-from-models)  
@@ -205,10 +211,30 @@ If you already have GPFiles, then you do not need to run preprocessing. Simply s
 
 If you want to generate GPFiles yourself (i.e., not using biv-me preprocessing), but you don't know how to, the example GPFiles in `example/guidepoints/default` can serve as reference for the required format.
 
-Models will be generated as .txt files containing mesh vertex coordinates, html plots for visualisation, and (optionally) .obj or .vtk files for LV endocardial, RV endocardial, and epicardial meshes.
+Models will be generated as .txt files containing mesh vertex coordinates, .html plots for visualisation, and (optionally) .obj or .vtk files for LV endocardial, RV endocardial, and epicardial meshes.
 
 ### Running end-to-end pipeline (preprocessing and fitting)
 If you specify in your config file to run both preprocessing and fitting, they will run in sequence as an end-to-end pipeline, such that biv-me models will be generated for each case for which there is DICOM data. When running as an end-to-end pipeline, there is no need to set the *gp_directory* for the fitting, as this will be automatically set as the *output_directory* of the preprocessing.
+
+## Visualisation of models (and images)
+Models can be visualised as .html plots which can be opened and interacted with inside your browser, or imported into a mesh visualisation software as .obj or .vtk objects to be viewed as a temporal sequence. The option to plot images alongside models in the .html plots is available to you in the config file (*include_images=True*), as is the option to export images as .vtk objects to display alongside fitted models (*export_images=True* - default is False) in a third-party software. Reviewing these settings to generate such visualisations can aid verification that the mesh reconstruction is faithful to the images.
+
+After performing fitting for the example case, .html plots can be found in `src/output/patient1/html`, and .vtk models and images can be found in the `src/output/patient1/vtk` and `src/output/patient1/images` folders respectively -- as long as the relevant config options have been set. 
+
+Slice shifts (to correct for breath-hold misalignment) are automatically applied to the images to ensure that models and images are correctly registered. These slice shifts are derived from the fitting process, and are therefore unavailable if fitting is not performed. 
+
+### Example .html plot (with images)
+Contour types, individual mesh surfaces, and images can be interactively toggled, and rotation and zoom can be applied to inspect different areas of interest. 
+
+![HtmlPlot1](images/html1.png)
+![HtmlPlot2](images/html2.png)
+
+### Example .vtk image and model sequence
+By importing .vtk models and images into a mesh visualisation software such as Paraview, temporal sequences such as the following can be generated, analysed, and exported into video format. 
+
+![VtkVis1](images/vis1.gif)
+![VtkVis2](images/vis2.gif)
+
 
 ## Analysis of models
 Several tools are provided for the analysis of biv-me models, including scripts for volume calculation, strain analysis (circumferential and longitudinal strains), and wall thickness measurement. 
@@ -414,9 +440,11 @@ One possible reason is that your DICOMs are stored in a remote server accessed b
 
 Another reason why some or all of your images cannot be read is that your DICOMs have a certain type of image compression that is not supported by pydicom. We have encountered this problem in the past and have since made adjustments, namely by incorporating pylibjpeg into the biv-me environment. However, we have not seen every possible form of image compression. If you think this problem might be occurring with your data, reach out to us with an example and we will be happy to look into it.
 
+Another explanation is that your images are being filtered out. We use the series description tag of the DICOMs to infer which series are cines and which are not. This works 99% of the time, but it may not suit your dataset. You can review the string keys used to exclude non-cine series in `src/bivme/preprocessing/dicom/extract_cines.py` and change them as needed.
+
 ### *This is fine, but can you generate LV only geometries?*
 
-At the moment, we don't have a direct way of generating LV only (endocardium and epicardium) models. However, it is a priority feature for development and you can expect it to be released by September 2025.
+At the moment, we don't have a direct way of generating LV only (endocardium and epicardium) models. However, it is a priority feature for development and you can expect it to be released soon.
 
 ### *How about the atria?*
 
