@@ -23,7 +23,7 @@ def get_intersections(point_list1, point_list2, distance_cutoff=4.5):
 
     return pairs
 
-def get_valve_points_from_intersections(segmentation, endolabel, superlabel, distance_cutoff=1):
+def get_valve_points_from_intersections(segmentation, endolabel, superlabel, distance_cutoff=3):
     ## TODO: Pass in contours not segmentation
     endo = (segmentation == endolabel).astype(np.uint8)
     superior = (segmentation == superlabel).astype(np.uint8)
@@ -55,14 +55,15 @@ def get_valve_points_from_intersections(segmentation, endolabel, superlabel, dis
             distance_cutoff += 0.5
 
     # Valve points will be extents of the intersection points
-    valveplane = suppts[pairs[:,1],:]
+    # valveplane = suppts[pairs[:,1],:]
+    valveplane = endopts[pairs[:,0],:] # Take the points corresponding to the first label (e.g. LV endo for mitral valve)
     # Find extent
     x = [v[0] for v in valveplane]
     y = [v[1] for v in valveplane]
     center = [np.mean(x), np.mean(y)]
     distances = [np.sqrt((v[0] - center[0])**2 + (v[1] - center[1])**2) for v in valveplane]
     valveplane = valveplane[np.argsort(distances)]
-    radius = int(np.max(distances))
+    radius = np.max(distances)
     
     max_dist = radius
     for i in range(len(valveplane)-len(valveplane//2), len(valveplane)):
@@ -172,6 +173,17 @@ def contour_SAX(segmentation):
         if len(pairs) > 0:
             RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
 
+    # Use RV epi to reassign any septal points that are actually free wall points
+    if len(RV_epi_pts)>0 and len(RV_septal_pts)>0:
+        pairs = get_intersections(RV_septal_pts, RV_epi_pts, distance_cutoff=2)
+
+        if len(pairs) > 0:
+            if len(RV_fw_pts) == 0:
+                RV_fw_pts = RV_septal_pts[np.unique(pairs[:,0])]
+            else:
+                RV_fw_pts = np.vstack([RV_fw_pts, RV_septal_pts[np.unique(pairs[:,0])]])
+            RV_septal_pts = np.array([pnt.tolist() for i, pnt in enumerate(RV_septal_pts) if i not in np.unique(pairs[:,0])], 
+                                dtype=np.int64)
 
     # Get intersection points between LV epi and LV myo to keep only myocardial points
     if len(LV_epi_pts)>0 and len(LV_myo_pts)>0:
@@ -295,7 +307,6 @@ def contour_RVOT(segmentation):
 
         if len(pairs) > 0:
             RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
-
 
     return [RV_s_pts, RV_fw_pts, RV_epi_pts, pa_pts]
 
@@ -489,7 +500,19 @@ def contour_3ch(segmentation):
         if len(pairs) > 0:
             RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
 
-    
+    # Use RV epi to reassign any septal points that are actually free wall points
+    if len(RV_epi_pts)>0 and len(RV_septal_pts)>0:
+        pairs = get_intersections(RV_septal_pts, RV_epi_pts, distance_cutoff=2)
+
+        if len(pairs) > 0:
+            if len(RV_fw_pts) == 0:
+                RV_fw_pts = RV_septal_pts[np.unique(pairs[:,0])]
+            else:
+                RV_fw_pts = np.vstack([RV_fw_pts, RV_septal_pts[np.unique(pairs[:,0])]])
+
+            RV_septal_pts = np.array([pnt.tolist() for i, pnt in enumerate(RV_septal_pts) if i not in np.unique(pairs[:,0])], 
+                                dtype=np.int64)
+
     # Remove intersection between RV epi and LV epi
     if len(RV_epi_pts)>0 and len(LV_epi_pts)>0:
         pairs = get_intersections(RV_epi_pts, LV_epi_pts, distance_cutoff=1.5)
@@ -629,6 +652,19 @@ def contour_4ch(segmentation):
 
         if len(pairs) > 0:
             RV_epi_pts = RV_epi_pts[np.unique(pairs[:,0])]
+
+    # Use RV epi to reassign any septal points that are actually free wall points
+    if len(RV_epi_pts)>0 and len(RV_septal_pts)>0:
+        pairs = get_intersections(RV_septal_pts, RV_epi_pts, distance_cutoff=2)
+
+        if len(pairs) > 0:
+            if len(RV_fw_pts) == 0:
+                RV_fw_pts = RV_septal_pts[np.unique(pairs[:,0])]
+            else:
+                RV_fw_pts = np.vstack([RV_fw_pts, RV_septal_pts[np.unique(pairs[:,0])]])
+                
+            RV_septal_pts = np.array([pnt.tolist() for i, pnt in enumerate(RV_septal_pts) if i not in np.unique(pairs[:,0])], 
+                                dtype=np.int64)
 
     # Remove intersection between RV epi and LV epi
     if len(RV_epi_pts)>0 and len(LV_epi_pts)>0:

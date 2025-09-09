@@ -88,14 +88,14 @@ class SliceViewer:
         if self.view == 'SAX':
             for i, phase in enumerate(self.phases):
                 try:
-                    self.rvi['SAX'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 2, 3, distance_cutoff=3.5)
+                    self.rvi['SAX'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 2, 3, distance_cutoff=2.5)
                 except:
                     self.rvi['SAX'][f'{phase}'] = None
 
         elif self.view == '2ch':
             for i, phase in enumerate(self.phases):
                 try:
-                    self.mv['2ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 3)
+                    self.mv['2ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 3, distance_cutoff=3)
                 except:
                     self.mv['2ch'][f'{phase}'] = None
 
@@ -107,12 +107,12 @@ class SliceViewer:
         elif self.view == '3ch':
             for i, phase in enumerate(self.phases):
                 try:
-                    self.mv['3ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 4)
+                    self.mv['3ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 4, distance_cutoff=3)
                 except:
                     self.mv['3ch'][f'{phase}'] = None
                 
                 try:
-                    self.av['3ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 5)
+                    self.av['3ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 5, distance_cutoff=3)
                 except:
                     self.av['3ch'][f'{phase}'] = None
                     self.my_logger.warning(f'Aortic valve not found on 3ch slice {self.sliceID} phase {phase}')
@@ -125,12 +125,12 @@ class SliceViewer:
         elif self.view == '4ch':
             for i, phase in enumerate(self.phases):
                 try:
-                    self.mv['4ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 4)
+                    self.mv['4ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 4, distance_cutoff=3)
                 except:
                     self.mv['4ch'][f'{phase}'] = None
                 
                 try:
-                    self.tv['4ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 3, 5)
+                    self.tv['4ch'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 3, 5, distance_cutoff=3)
                 except:
                     self.tv['4ch'][f'{phase}'] = None
                     self.my_logger.warning(f'Tricuspid valve not found on 4ch slice {self.sliceID} phase {phase}')
@@ -143,7 +143,7 @@ class SliceViewer:
         elif self.view == 'RVOT':
             for i, phase in enumerate(self.phases):
                 try:
-                    self.pv['RVOT'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 3)
+                    self.pv['RVOT'][f'{phase}'] = contouring.get_valve_points_from_intersections(self.segmentations[i], 1, 3, distance_cutoff=3)
                 except:
                     self.pv['RVOT'][f'{phase}'] = None
     
@@ -527,7 +527,6 @@ class SliceViewer:
                     if len(points) == 0:
                         continue
                         
-                    # Invert points first due to initial transpose
                     pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                             for point in points]
 
@@ -636,6 +635,9 @@ class SliceViewer:
                         continue
 
                     elif points.size == 2:
+                        if points.shape != (2,):
+                            points = points[0]
+
                         pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
 
                     else:
@@ -721,12 +723,16 @@ class SliceViewer:
                         continue
 
                     elif points.size == 2:
+                        if points.shape != (2,):
+                            points = points[0]
+
                         pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
+
 
                     else:
                         pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                                 for point in points]
-                    
+
                     # Write to file
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=1.0)
 
@@ -809,12 +815,15 @@ class SliceViewer:
                         continue
 
                     elif points.size == 2:
+                        if points.shape != (2,):
+                            points = points[0]
+
                         pts = [guidepointprocessing.inverse_coordinate_transformation(points, self.imgPos, self.imgOrient, self.ps)]
 
                     else:
                         pts = [guidepointprocessing.inverse_coordinate_transformation(point, self.imgPos, self.imgOrient, self.ps)
                                 for point in points]
-
+                        
                     # Write to file
                     guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
 

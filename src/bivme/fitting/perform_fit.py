@@ -268,24 +268,24 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                 except:
                     my_logger.warning('Error in creating aorta phantom points')
 
-
                 # Example on how to set different weights for different points group (R.B.)
-                data_set.weights[data_set.contour_type == ContourType.MITRAL_PHANTOM] = 2
+                data_set.weights[data_set.contour_type == ContourType.MITRAL_PHANTOM] = 1
                 data_set.weights[data_set.contour_type == ContourType.AORTA_PHANTOM] = 1
                 data_set.weights[data_set.contour_type == ContourType.PULMONARY_PHANTOM] = 1
                 data_set.weights[data_set.contour_type == ContourType.TRICUSPID_PHANTOM] = 1
 
                 data_set.weights[data_set.contour_type == ContourType.APEX_POINT] = 1
-                data_set.weights[data_set.contour_type == ContourType.RV_INSERT] = 1
+                data_set.weights[data_set.contour_type == ContourType.RV_INSERT] = 2
 
                 data_set.weights[data_set.contour_type == ContourType.MITRAL_VALVE] = 1
                 data_set.weights[data_set.contour_type == ContourType.AORTA_VALVE] = 1
                 data_set.weights[data_set.contour_type == ContourType.PULMONARY_VALVE] = 1
+                data_set.weights[data_set.contour_type == ContourType.TRICUSPID_VALVE] = 1
 
                 # Perform linear fit
                 biventricular_model = deepcopy(aligned_biventricular_model)
                 solve_least_squares_problem(biventricular_model, config["fitting_weights"]["guide_points"], data_set, my_logger)
-#
+
                 ## Perform diffeomorphic fit
                 residuals += solve_convex_problem(
                     biventricular_model,
@@ -321,7 +321,6 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                             image_plots, image_grids = plot_images(image_dir, data_set, image_grids, output_dir, shift_to_apply, num)
                             data += image_plots
                         
-
                     output_folder_html = Path(output_folder, f"html{gp_suffix}")
                     output_folder_html.mkdir(exist_ok=True)
 
