@@ -1,6 +1,4 @@
 import os
-import numpy as np
-import nibabel as nib
 import shutil
 import torch
 
@@ -14,8 +12,14 @@ from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 
 from bivme.preprocessing.dicom.src.utils import write_nifti
 
-def init_nnUNetv2(model_folder):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+def init_nnUNetv2(model_folder, my_logger):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("cpu")  # nnUNetv2 does not support MPS, so we use CPU instead
+        my_logger.warning('MPS is available, but nnUNetv2 does not support it. Using CPU instead. This may be very slow!')
+    else:
+        device = torch.device("cpu")
 
     predictor = nnUNetPredictor(tile_step_size=0.5,
         use_gaussian=True,
@@ -44,7 +48,7 @@ def predict_view(input_folder, output_folder, model, view, dataset, my_logger):
     if len(os.listdir(view_input_folder)) > 0:
 
         # Initialize nnUNet model
-        predictor = init_nnUNetv2(model_folder_name)
+        predictor = init_nnUNetv2(model_folder_name, my_logger)
 
         # Make predictions
         predictor.predict_from_files(
