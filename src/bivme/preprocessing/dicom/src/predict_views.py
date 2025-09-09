@@ -170,7 +170,12 @@ def predict_on_images(vs):
     dir_img_test = os.path.join(vs.dst, 'view-classification', 'unsorted') # Directory of images to predict. Predictions are run on .pngs
     
     # Load model from file
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
 
     try:
         loaded_model_path = glob.glob(os.path.join(vs.model, "ViewSelection") + "/resnet50*.pth")[0]
@@ -181,7 +186,7 @@ def predict_on_images(vs):
     loaded_model = torchvision.models.resnet50()
     loaded_model.fc = nn.Linear(2048, 10)
 
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
         loaded_model.load_state_dict(torch.load(loaded_model_path, map_location=torch.device('cpu'))) # Load model on CPU if CUDA is not available
     else:
         loaded_model.load_state_dict(torch.load(loaded_model_path)) # Otherwise load model on GPU
@@ -199,7 +204,8 @@ def predict_on_images(vs):
     ])
     
     test_dataset = CustomImageDataset(test_annotations, dir_img_test, transform=orig_transform)
-    test_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False)
+    batch_size = len(test_dataset)//4
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
     # vs.my_logger.info("Running view predictions...")
     model.eval()
@@ -208,7 +214,7 @@ def predict_on_images(vs):
     test_pred_df = pd.DataFrame(columns=['image_name', 'predicted_label'])
 
     with torch.no_grad():
-        for data in test_loader:
+        for i, data in enumerate(test_loader):
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
 
@@ -219,7 +225,7 @@ def predict_on_images(vs):
             # Add to dataframe
             predicted_labels = predicted.cpu().numpy()
 
-            img_names = test_dataset.img_labels['image_name'].values
+            img_names = test_dataset.img_labels['image_name'].values[batch_size*i:batch_size*(i+1)]
 
             # Calculate confidence
             confidence = nn.functional.softmax(outputs, dim=1)
