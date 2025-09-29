@@ -5,7 +5,6 @@ import statistics
 
 from bivme.preprocessing.dicom.src.viewselection import ViewSelector
 from bivme.preprocessing.dicom.src.predict_views import predict_views
-from bivme.preprocessing.dicom.src.utils import write_sliceinfofile
 from bivme.preprocessing.dicom.src.viewcorrection import VSGUI
 
 CONFIDENCE_THRESHOLD = 0.66  # Modify this to change the confidence threshold for view selection. If metadata and image-based predictions disagree, the image-based prediction will be used if its confidence is above this threshold. 
@@ -431,8 +430,5 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
 
     # generate dataframe
     slice_info_df = pd.DataFrame(out, columns = ['Slice ID', 'Frames Per Slice', 'File', 'View', 'ImagePositionPatient', 'ImageOrientationPatient', 'Pixel Spacing', 'Img'])
-
-    # write slice info file
-    slice_mapping = write_sliceinfofile(dst, slice_info_df)
     
-    return slice_info_df, num_phases, slice_mapping
+    return slice_info_df, num_phases

@@ -11,6 +11,7 @@ import nnunetv2 as nnunetv2
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 
 from bivme.preprocessing.dicom.src.utils import write_nifti
+from bivme.preprocessing.dicom.src.utils import write_sliceinfofile
 
 def init_nnUNetv2(model_folder, my_logger):
     if torch.cuda.is_available():
@@ -110,3 +111,6 @@ def segment_views(dst, model, slice_info_df, my_logger):
         
         dataset = datasets_3d[i]
         predict_view(input_folder, output_folder, model, view, dataset, my_logger)
+
+    # Write updated slice info file with new pixel spacings
+    write_sliceinfofile(dst, slice_info_df)

@@ -79,7 +79,7 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.success(f'Pre-preprocessing complete. Cines extracted to {src}.')
 
     ## Step 1: View selection
-    slice_info_df, num_phases, slice_mapping = select_views(case, src, dst, MODEL_DIR, states, config["view-selection"]["option"], 
+    slice_info_df, num_phases = select_views(case, src, dst, MODEL_DIR, states, config["view-selection"]["option"], 
                                                             config["view-selection"]["correct_mode"], mylogger)
 
     mylogger.success(f'View selection complete.')
@@ -100,7 +100,7 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.success(f'Guide points generated successfully.')
 
     ## Step 4: Export guide points
-    export_guidepoints(dst, output, slice_dict, slice_mapping, config["contouring"]["smooth_landmarks"])
+    export_guidepoints(dst, output, slice_dict, config["contouring"]["smooth_landmarks"])
     mylogger.success(f'Guide points exported successfully.')
 
     ## Step 5: Generate HTML (optional) of guide points for visualisation

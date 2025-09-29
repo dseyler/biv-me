@@ -476,12 +476,10 @@ class SliceViewer:
 
         return smoothed_landmarks
 
-    def export_slice(self, output_folder, slice_mapping, smooth_landmarks):
+    def export_slice(self, output_folder, smooth_landmarks):
         self.get_slice_info()
         os.makedirs(output_folder, exist_ok=True)
 
-        self.mapped_sliceID = slice_mapping[self.sliceID]
-        
         if self.view == 'SAX':
             if smooth_landmarks:
                 # Get all landmarks
@@ -531,7 +529,7 @@ class SliceViewer:
                             for point in points]
 
                     # Write to file
-                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
+                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.sliceID, weight=1.0, phase=int(phase))
 
         elif self.view == 'RVOT':
             if smooth_landmarks:
@@ -581,7 +579,7 @@ class SliceViewer:
                             for point in points]
                             
                     # Write to file
-                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
+                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.sliceID, weight=1.0, phase=int(phase))
 
         elif self.view == '2ch':
             if smooth_landmarks:
@@ -645,7 +643,7 @@ class SliceViewer:
                                 for point in points]
                     
                     # Write to file
-                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
+                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.sliceID, weight=1.0, phase=int(phase))
 
         elif self.view == '3ch':
             if smooth_landmarks:
@@ -734,7 +732,7 @@ class SliceViewer:
                                 for point in points]
 
                     # Write to file
-                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=1.0)
+                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.sliceID, weight=1.0, phase=1.0)
 
         elif self.view == '4ch':
             if smooth_landmarks:
@@ -825,52 +823,7 @@ class SliceViewer:
                                 for point in points]
                         
                     # Write to file
-                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.mapped_sliceID, weight=1.0, phase=int(phase))
-
-    def plot_slice(self):
-        import matplotlib
-        matplotlib.use('TkAgg')
-        plt.ion()
-
-        fig, ax = plt.subplots(2, 2, figsize=(15, 8))
-        # image and segmentation for each time frame
-        # ax[0, 0].imshow(self.images[0], cmap='gray')
-        ax[0, 0].imshow(self.segmentations[0], cmap='inferno', alpha=0.2)
-        ax[0, 0].set_title(f'{self.view} Slice {self.sliceID} Time Frame 0')
-        ax[0, 0].axis('off')
-        # ax[0, 1].imshow(self.images[1], cmap='gray')
-        ax[0, 1].imshow(self.segmentations[1], cmap='inferno', alpha=0.2)
-        ax[0, 1].set_title(f'{self.view} Slice {self.sliceID} Time Frame {int(self.es_phase)}')
-        ax[0, 1].axis('off')
-
-        # landmarks and contours
-        ax[1, 0].imshow(self.images[0], cmap='gray')
-        ax[1, 1].imshow(self.images[1], cmap='gray')
-        colours = ['r', 'g', 'b', 'y', 'm']
-
-        for i, phase in enumerate(self.contours):
-            for j, contype in enumerate(self.contours[phase]):
-                try:
-                    ax[1, i].scatter(contype[:,0], contype[:,1], c=colours[j], s=1)
-                except:
-                    pass
-        
-        try:
-            for i, phase in enumerate([0, int(self.es_phase)]):
-                for j, landmarktype in enumerate(self.landmarks[self.view]):
-                    try:
-                        ax[1, i].scatter(self.landmarks[self.view][landmarktype][str(phase)][0][0], self.landmarks[self.view][landmarktype][str(phase)][0][1], c='white', marker = '+', s=5)
-                        ax[1, i].scatter(self.landmarks[self.view][landmarktype][str(phase)][1][0], self.landmarks[self.view][landmarktype][str(phase)][1][1], c='white', marker = '+', s=5)
-                    except:
-                        try:
-                            ax[1, i].scatter(self.landmarks[self.view][landmarktype][str(phase)][0], self.landmarks[self.view][landmarktype][str(phase)][1], c='white', marker = '+', s=5)
-                        except:
-                            pass
-                        pass
-        except:
-            pass
-        plt.show(block=False)
-        plt.pause(0.01)
+                    guidepointprocessing.write_to_gp_file(output_folder + f'/GPFile_{int(phase):03}.txt', pts, labels[i], self.sliceID, weight=1.0, phase=int(phase))
 
 
         
