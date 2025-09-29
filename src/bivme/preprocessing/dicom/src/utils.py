@@ -5,15 +5,10 @@ import cv2
 import scipy.ndimage as ndimage
 
 def write_sliceinfofile(dst, slice_info_df):
-    # Calculate a slice mapping (reformat to 1-numslices)
-    slice_mapping = {}
-    for i, row in slice_info_df.iterrows():
-        slice_mapping[row['Slice ID']] = int(row['Slice ID'])
-        
     # write to slice info file
     with open(os.path.join(dst, 'SliceInfoFile.txt'), 'w') as f:
         for i, row in slice_info_df.iterrows():
-            sliceID = slice_mapping[row['Slice ID']]
+            sliceID = int(row['Slice ID'])
             file = row['File']
             file = os.path.basename(file)
             view = row['View']
@@ -31,8 +26,6 @@ def write_sliceinfofile(dst, slice_info_df):
                                                 imageOrientationPatient[3], imageOrientationPatient[4], imageOrientationPatient[5]))
             f.write('PixelSpacing\t')
             f.write('{}\t{}\n'.format(pixelSpacing[0], pixelSpacing[1]))
-    
-    return slice_mapping
     
 
 def write_nifti(slice_id, pixel_array, pixel_spacing, input_folder, view):
