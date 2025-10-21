@@ -86,7 +86,7 @@ git submodule update --init
 ```
 By default, this will install the submodule associated with this version of biv-me. Refer to the [FAQs](#faqs) for more information on version control of deep learning models.
 
-You can verify that the models have been downloaded by checking that the below directories contain .pth and .joblib files that are larger than 1 KB. If they don't, refer to the troubleshooting section below.
+You can verify that the models have been downloaded by checking that the below directories contain .pth files that are larger than 1 KB. If they don't, refer to the troubleshooting section below.
 
     src 
     └─── bivme

@@ -186,10 +186,8 @@ def predict_on_images(vs):
     loaded_model = torchvision.models.resnet50()
     loaded_model.fc = nn.Linear(2048, 10)
 
-    if not torch.cuda.is_available() and not torch.backends.mps.is_available():
-        loaded_model.load_state_dict(torch.load(loaded_model_path, map_location=torch.device('cpu'))) # Load model on CPU if CUDA is not available
-    else:
-        loaded_model.load_state_dict(torch.load(loaded_model_path)) # Otherwise load model on GPU
+    # Load model
+    loaded_model.load_state_dict(torch.load(loaded_model_path, map_location=device))
 
     model = loaded_model
 
