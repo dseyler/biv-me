@@ -39,8 +39,8 @@ def extract_cines(src, dst, my_logger):
                 continue
             
             # Check if the description contains any of the inclusion terms and does not contain any of the exclusion terms
-            if any(term in description for term in INCLUSION_TERMS) and not any(term in description for term in EXCLUSION_TERMS):
-                file_paths.append(os.path.join(root, file))
+            #if any(term in description for term in INCLUSION_TERMS) and not any(term in description for term in EXCLUSION_TERMS):
+            file_paths.append(os.path.join(root, file))
     
     my_logger.info(f'Found {total_images} images in the source directory')
     my_logger.info(f'Extracted {len(file_paths)} which matched the inclusion criteria.')

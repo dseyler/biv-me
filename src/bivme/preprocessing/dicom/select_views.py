@@ -174,7 +174,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             if row['Frames Per Slice'] != num_phases:
                 my_logger.warning(f"Series {row['Series Number']} has a mismatching number of phases ({row['Frames Per Slice']} vs {num_phases}).")
 
-        view_predictions = handle_duplicates(view_predictions, viewSelector, my_logger) # If duplicate slices are found, choose which ones to keep based on quality (approximated by confidence in prediction)
+        #view_predictions = handle_duplicates(view_predictions, viewSelector, my_logger) # If duplicate slices are found, choose which ones to keep based on quality (approximated by confidence in prediction)
 
         # Print summary to log
         my_logger.success(f'View predictions for {patient}:')
@@ -274,7 +274,7 @@ def select_views(patient, src, dst, model, states, option, correct_mode, my_logg
             if row['Frames Per Slice'] != num_phases:
                 my_logger.warning(f"Series {row['Series Number']} has a mismatching number of phases ({row['Frames Per Slice']} vs {num_phases}).")
 
-        view_predictions = handle_duplicates(view_predictions, viewSelector, my_logger) # If duplicate slices are found, choose which ones to keep based on quality (approximated by confidence in prediction)
+        #view_predictions = handle_duplicates(view_predictions, viewSelector, my_logger) # If duplicate slices are found, choose which ones to keep based on quality (approximated by confidence in prediction)
 
         # Print summary to log
         my_logger.success(f'View predictions for {patient}:')

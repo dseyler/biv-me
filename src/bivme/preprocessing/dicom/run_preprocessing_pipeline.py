@@ -20,6 +20,42 @@ from bivme.preprocessing.dicom.export_guidepoints import export_guidepoints
 from bivme.plotting.plot_guidepoints import generate_html # for plotting guidepoints
 
 
+def load_precomputed_segmentations(dst, mylogger):
+    """
+    Load precomputed segmentations from the processing directory.
+    This function assumes segmentations are already available in the expected format.
+    """
+    segmentation_original = '/Users/dseyler/Documents/Marsden_Lab/cine_segmentation/Manual_segmentions/segmentations_newest'
+    segmentation_dir = os.path.join(dst, 'segmentations')
+    # Create segmentation directory if it doesn't exist
+    os.makedirs(segmentation_dir, exist_ok=True)
+
+    # Copy original segmentations to segmentation_dir
+    if os.path.exists(segmentation_original):
+        mylogger.info(f'Copying segmentations from {segmentation_original} to {segmentation_dir}')
+        # Copy all contents including subdirectories
+        shutil.copytree(segmentation_original, segmentation_dir, dirs_exist_ok=True)
+    else:
+        mylogger.warning(f'Original segmentation directory not found at {segmentation_original}')
+    
+    if not os.path.exists(segmentation_dir):
+        mylogger.error(f'Segmentation directory not found at {segmentation_dir}. Please ensure precomputed segmentations are available or set use_precomputed_segmentations=false.')
+        raise FileNotFoundError(f'Precomputed segmentations not found at {segmentation_dir}. Please ensure segmentations are available or set use_precomputed_segmentations=false.')
+    else:
+        mylogger.info(f'Found existing segmentation directory at {segmentation_dir}')
+        
+        # Verify that all expected view directories exist
+        views = ['SAX', '2ch', '3ch', '4ch', 'RVOT']
+        for view in views:
+            view_dir = os.path.join(segmentation_dir, view)
+            if os.path.exists(view_dir):
+                num_files = len([f for f in os.listdir(view_dir) if f.endswith('.nii.gz')])
+                mylogger.info(f'Found {num_files} segmentation files for {view} view')
+            else:
+                mylogger.warning(f'No segmentation directory found for {view} view')
+                os.makedirs(view_dir, exist_ok=True)
+
+
 def perform_preprocessing(case, config, mylogger):
     # Path: src/bivme/preprocessing/dicom/models
     MODEL_DIR = Path(os.path.dirname(__file__)) / 'models'
@@ -86,11 +122,18 @@ def perform_preprocessing(case, config, mylogger):
     mylogger.info(f'Number of phases: {num_phases}')
 
     ## Step 2: Segmentation
-    seg_start_time = time.time()
-    mylogger.info(f'Starting segmentation...')
-    segment_views(dst, MODEL_DIR, slice_info_df, mylogger) # TODO: Find a way to suppress nnUnet output
-    seg_end_time = time.time()
-    mylogger.success(f'Segmentation complete. Time taken: {seg_end_time-seg_start_time} seconds.')
+    #if config["view-selection"]["use_precomputed_segmentations"]:
+    mylogger.info(f'Using precomputed segmentations...')
+    # Load existing segmentations from processing directory
+    segment_views(dst, MODEL_DIR, slice_info_df, mylogger)
+    load_precomputed_segmentations(dst, mylogger)
+    mylogger.success(f'Precomputed segmentations loaded successfully.')
+    #else:
+    #    seg_start_time = time.time()
+    #    mylogger.info(f'Starting segmentation...')
+    #    segment_views(dst, MODEL_DIR, slice_info_df, mylogger) # TODO: Find a way to suppress nnUnet output
+    #    seg_end_time = time.time()
+    #    mylogger.success(f'Segmentation complete. Time taken: {seg_end_time-seg_start_time} seconds.')
 
     ## Step 2.1: Correct phase mismatch (if required)
     correct_phase_mismatch(dst, slice_info_df, num_phases, mylogger) 
@@ -137,4 +180,8 @@ def validate_config(config, mylogger):
 
     if not (config["output_pp"]["overwrite"] == True or config["output_pp"]["overwrite"] == False):
         mylogger.error(f'Invalid overwrite option: {config["output_pp"]["overwrite"]}. Must be true or false.')
+        sys.exit(0)
+
+    if not (config["view-selection"]["use_precomputed_segmentations"] == True or config["view-selection"]["use_precomputed_segmentations"] == False):
+        mylogger.error(f'Invalid use_precomputed_segmentations option: {config["view-selection"]["use_precomputed_segmentations"]}. Must be true or false.')
         sys.exit(0)

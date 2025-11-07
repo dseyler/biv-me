@@ -110,7 +110,8 @@ def segment_views(dst, model, slice_info_df, my_logger):
         my_logger.info(f'Segmenting {view} images...')
         
         dataset = datasets_3d[i]
-        predict_view(input_folder, output_folder, model, view, dataset, my_logger)
+        #predict_view(input_folder, output_folder, model, view, dataset, my_logger)
 
+    my_logger.success(f'Writing slice info file...')
     # Write updated slice info file with new pixel spacings
     write_sliceinfofile(dst, slice_info_df)

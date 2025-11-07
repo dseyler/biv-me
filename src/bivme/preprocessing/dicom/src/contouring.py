@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from scipy.spatial import cKDTree
 
 def find_center(p1, p2):
     
@@ -216,6 +217,20 @@ def contour_SAX(segmentation):
     # If there are no rv endo points, remove the rv epi points
     if len(RV_endo_pts) == 0:
         RV_epi_pts = []
+    
+    # Filter out SAX_RV_freewall points that are more than 1.5 pixels away from nearest RV_myo
+    if len(RV_fw_pts) > 0 and len(RV_myo_pts) > 0:
+        # Build KD-tree for efficient nearest neighbor search
+        rv_myo_tree = cKDTree(RV_myo_pts)
+        # Find distance to nearest RV_myo point for each RV_freewall point
+        distances, _ = rv_myo_tree.query(RV_fw_pts, k=1)
+        # Keep only points within 1.5 pixels
+        RV_fw_pts = RV_fw_pts[distances <= 1.5]
+        # Ensure proper array shape
+        if len(RV_fw_pts) == 0:
+            RV_fw_pts = np.empty((0, 2), dtype=np.int64)
+        else:
+            RV_fw_pts = np.array(RV_fw_pts, dtype=np.int64)
                 
     return [LV_endo_pts, LV_epi_pts, RV_septal_pts, RV_fw_pts, RV_epi_pts]
 

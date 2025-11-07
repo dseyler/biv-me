@@ -2113,3 +2113,106 @@ class BiventricularModel:
         points = np.dot(basis_matrix, self.control_mesh)
 
         return points, interpolated_field
+
+    def compute_pulmonary_artery_circularity_matrix(self) -> np.ndarray:
+        """
+        Compute regularization matrix for pulmonary artery circularity.
+        
+        This matrix penalizes deviations from circularity of the pulmonary valve.
+        The matrix is 388x388 (NUM_NODES x NUM_NODES) and can be added to the
+        fitting optimization problem's A matrix.
+        
+        Returns
+        -------
+        np.ndarray
+            Regularization matrix of shape (388, 388). Returns zero matrix if
+            pulmonary valve has insufficient points or if computation fails.
+        """
+        from scipy.linalg import svd
+        
+        # Initialize zero matrix
+        R = np.zeros((self.NUM_NODES, self.NUM_NODES))
+        
+        try:
+            # Extract pulmonary valve surface points
+            surface_index = self.get_surface_vertex_start_end_index(Surface.PULMONARY_VALVE)
+            start_idx = surface_index[0]
+            end_idx = surface_index[1]
+            
+            # Exclude centroid (last point)
+            pulmonary_points = self.et_pos[start_idx:end_idx, :]
+            
+            if len(pulmonary_points) < 3:
+                # Not enough points to fit circle
+                return R
+            
+            # Get basis matrix rows for pulmonary valve points
+            basis_rows = self.basis_matrix[start_idx:end_idx, :]
+            num_valve_points = len(pulmonary_points)
+            
+            # Fit plane using SVD
+            centroid = np.mean(pulmonary_points, axis=0)
+            centered_points = pulmonary_points - centroid
+            
+            # SVD to find plane normal
+            U, s, Vt = svd(centered_points)
+            plane_normal = Vt[-1, :]  # Last row is the normal
+            plane_normal = plane_normal / np.linalg.norm(plane_normal)
+            
+            # Project points onto plane
+            projected_points = centered_points - np.outer(np.dot(centered_points, plane_normal), plane_normal)
+            
+            # Rotate to 2D plane
+            z_axis = np.array([0, 0, 1])
+            rotated_points = rodrigues_rot(projected_points, plane_normal, z_axis)
+            
+            # Fit circle in 2D
+            circle_center_2d, radius = fit_circle_2d(
+                rotated_points[:, 0], rotated_points[:, 1]
+            )
+            
+            if radius <= 0:
+                return R
+            
+            # Compute gradient of circularity error with respect to surface points
+            # Error for each point: E_i = (|p_i - c| - r)^2
+            # Gradient: dE_i/dp_i = 2 * (|p_i - c| - r) * (p_i - c) / |p_i - c|
+            
+            gradient_surface = np.zeros((num_valve_points, 3))
+            
+            # Convert 2D center back to 3D for gradient computation
+            center_2d_3d = np.zeros(3)
+            center_2d_3d[:2] = circle_center_2d
+            center_3d_plane = rodrigues_rot(center_2d_3d.reshape(1, -1), z_axis, plane_normal)[0]
+            center_3d = center_3d_plane + centroid
+            
+            for i in range(num_valve_points):
+                point_3d = pulmonary_points[i]
+                vec_to_center = point_3d - center_3d
+                dist_to_center = np.linalg.norm(vec_to_center)
+                
+                if dist_to_center > 1e-10:
+                    # Gradient in 3D space
+                    error_term = dist_to_center - radius
+                    gradient_surface[i] = 2.0 * error_term * vec_to_center / dist_to_center
+                else:
+                    # Point is at center, use zero gradient
+                    gradient_surface[i] = np.zeros(3)
+            
+            # Back-project gradient to control points via basis matrix
+            # For each coordinate (x, y, z), compute gradient_control = basis_rows.T @ gradient_surface[:, coord]
+            gradient_control = np.zeros((self.NUM_NODES, 3))
+            for coord in range(3):
+                gradient_control[:, coord] = basis_rows.T @ gradient_surface[:, coord]
+            
+            # Form regularization matrix: R = gradient_control @ gradient_control.T
+            # This is the outer product summed over coordinates
+            # R[i,j] = sum_over_coords(gradient_control[i, coord] * gradient_control[j, coord])
+            R = np.dot(gradient_control, gradient_control.T)
+            
+        except Exception as e:
+            # If computation fails, return zero matrix
+            logger.warning(f"Failed to compute pulmonary artery circularity matrix: {e}")
+            return np.zeros((self.NUM_NODES, self.NUM_NODES))
+        
+        return R

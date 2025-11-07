@@ -7,6 +7,8 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from loguru import logger
+from pathlib import Path
+from scipy.spatial import cKDTree
 
 # local imports
 from . import fitting_tools as tools
@@ -621,6 +623,153 @@ class GPDataSet(object):
 
         return new_points
 
+    def replace_pulmonary_valve_points(self, new_points, weight=1.0):
+        """
+        Replace all pulmonary valve and pulmonary phantom points with new points.
+        
+        Parameters
+        ----------
+        new_points : np.ndarray
+            Array of shape (N, 3) with new pulmonary valve points
+        weight : float
+            Weight for the new points. Default: 1.0
+        """
+        # Find indices of pulmonary valve and phantom points to remove
+        mask_to_remove = (
+            (self.contour_type == ContourType.PULMONARY_VALVE) |
+            (self.contour_type == ContourType.PULMONARY_PHANTOM)
+        )
+        
+        # Keep points that are NOT pulmonary valve or phantom
+        keep_mask = ~mask_to_remove
+        
+        self.points_coordinates = self.points_coordinates[keep_mask]
+        self.slice_number = self.slice_number[keep_mask]
+        self.contour_type = self.contour_type[keep_mask]
+        self.weights = self.weights[keep_mask]
+        
+        # Add new phantom points
+        if len(new_points) > 0:
+            self.add_data_points(
+                new_points,
+                [ContourType.PULMONARY_PHANTOM] * len(new_points),
+                [-1] * len(new_points),  # slice_number = -1 for phantom points
+                [weight] * len(new_points),
+            )
+
+    @staticmethod
+    def generate_longitudinal_aligned_pulmonary_phantom_points(
+        biv_model, num_points, my_logger=None
+    ):
+        """
+        Generate pulmonary valve phantom points aligned orthogonally to longitudinal direction.
+        
+        The longitudinal direction is defined as apex to mitral valve.
+        Points are generated in a plane orthogonal to this direction, centered along
+        the longitudinal axis that passes through the pulmonary valve centroid, but
+        positioned at the longitudinal height of the highest pulmonary valve point.
+        The diameter is equal to the average distance from centroid to pulmonary valve
+        surface points.
+        
+        Parameters
+        ----------
+        biv_model : BiventricularModel
+            Fitted biventricular model
+        num_points : int
+            Number of phantom points to generate
+        my_logger : logger, optional
+            Logger instance for logging
+        
+        Returns
+        -------
+        np.ndarray
+            Array of shape (num_points, 3) with phantom point coordinates
+        """
+        from bivme.fitting.fitting_tools import rodrigues_rot, generate_2Delipse_by_vectors
+        
+        try:
+            # Get pulmonary valve surface points
+            surface_index = biv_model.get_surface_vertex_start_end_index(Surface.PULMONARY_VALVE)
+            start_idx = surface_index[0]
+            end_idx = surface_index[1]
+            
+            # Exclude centroid (last point)
+            pulmonary_points = biv_model.et_pos[start_idx:end_idx, :]
+            
+            if len(pulmonary_points) < 1:
+                if my_logger:
+                    my_logger.warning("No pulmonary valve points found for phantom generation")
+                return np.array([]).reshape(0, 3)
+            
+            # Compute pulmonary valve centroid
+            pulmonary_centroid = biv_model.et_pos[end_idx, :]  # Last point is centroid
+            
+            # Compute diameter: average distance from centroid to surface points, then multiply by 2
+            distances = np.linalg.norm(pulmonary_points - pulmonary_centroid, axis=1)
+            diameter = 2.0 * np.mean(distances)
+            radius = diameter / 2.0
+            
+            if radius <= 0:
+                if my_logger:
+                    my_logger.warning("Invalid radius for pulmonary phantom generation")
+                return np.array([]).reshape(0, 3)
+            
+            # Compute longitudinal direction: apex to mitral valve
+            apex_pos = biv_model.et_pos[biv_model.APEX_INDEX, :]
+            mitral_index = biv_model.get_surface_vertex_start_end_index(Surface.MITRAL_VALVE)
+            mitral_centroid = biv_model.et_pos[mitral_index[1], :]  # Last point is centroid
+            
+            longitudinal_axis = apex_pos - mitral_centroid
+            longitudinal_norm = np.linalg.norm(longitudinal_axis)
+            
+            if longitudinal_norm < 1e-10:
+                if my_logger:
+                    my_logger.warning("Longitudinal axis has zero length")
+                return np.array([]).reshape(0, 3)
+            
+            longitudinal_axis = longitudinal_axis / longitudinal_norm
+            
+            # Find the "highest" pulmonary valve point along the longitudinal axis
+            # Project all pulmonary valve points onto the longitudinal axis
+            # Use the centroid as a reference point for projection
+            # Note: longitudinal_axis points from mitral (base) toward apex
+            # So "highest" (furthest from apex, closest to base) has minimum projection
+            centroid_to_points = pulmonary_points - pulmonary_centroid
+            projections = np.dot(centroid_to_points, longitudinal_axis)
+            
+            # Find the index of the point with minimum projection (highest point, furthest from apex)
+            min_projection_idx = np.argmin(projections)
+            highest_point = pulmonary_points[min_projection_idx]
+            
+            # Compute the phantom center as the arithmetic mean of the highest point and centroid
+            phantom_center = 0.5 * (highest_point + pulmonary_centroid)
+            
+            # Plane normal is the longitudinal axis (points lie in plane orthogonal to it)
+            plane_normal = longitudinal_axis
+            
+            # Generate points on circle in 2D plane
+            t = np.linspace(-np.pi, np.pi, num_points)
+            circle_center_2d = np.array([0.0, 0.0])
+            circle_points_2d = generate_2Delipse_by_vectors(t, circle_center_2d, radius)
+            
+            # Convert 2D points to 3D: start with z-axis as reference
+            z_axis = np.array([0, 0, 1])
+            circle_points_3d_plane = np.zeros((num_points, 3))
+            circle_points_3d_plane[:, :2] = circle_points_2d
+            
+            # Rotate from z-axis plane to longitudinal-orthogonal plane
+            circle_points_3d = rodrigues_rot(circle_points_3d_plane, z_axis, plane_normal)
+            
+            # Translate to phantom center (at height of highest point, along longitudinal axis through centroid)
+            phantom_points = circle_points_3d + phantom_center
+            
+            return phantom_points
+            
+        except Exception as e:
+            if my_logger:
+                my_logger.error(f"Error generating longitudinal-aligned pulmonary phantom points: {e}")
+            return np.array([]).reshape(0, 3)
+
     def plot_dataset(self, contours_to_plot=[]):
         """This function plots this entire dataset.
         Input:
@@ -748,7 +897,7 @@ class GPDataSet(object):
 
         return contourPlots
 
-    def sinclair_slice_shifting(self, my_logger : logger, fix_lax : bool=False):
+    def sinclair_slice_shifting(self, my_logger : logger, fix_lax : bool=False, lv_only_slice_ids : list = []):
         """This method does a breath-hold misregistration correction be default for both LAX
         and SAX using Sinclair, Matthew, et al. "Fully automated segmentation-based
         respiratory motion correction of multiplanar cardiac magnetic resonance images
@@ -762,6 +911,7 @@ class GPDataSet(object):
         If one need to correct the shift for the SAX axis only, set fix_LAX to True
         Input:
            fix_LAX: bool, true if one need to keep LAX contours fixed.
+           lv_only_slice_ids: list of int, slice IDs that should only use LV endo/epi contours for shift calculation
         Output:
            2D translations needed (N*2, where N is the number of slices).
            3D position of the translation (Nx3, where N is the number of slice)
@@ -771,6 +921,36 @@ class GPDataSet(object):
             my_logger.warning("LAX_LV_EPICARDIAL contour is missing. Slice shift have not been "
                 "corrected")
             return [], []
+
+        # Validate that all lv_only_slice_ids are SAX slices
+        if len(lv_only_slice_ids) > 0:
+            sax_contour_types = [
+                ContourType.SAX_LV_ENDOCARDIAL,
+                ContourType.SAX_RV_FREEWALL,
+                ContourType.SAX_RV_SEPTUM,
+                ContourType.SAX_RV_OUTLET,
+                ContourType.SAX_LV_EPICARDIAL,
+            ]
+            for slice_id in lv_only_slice_ids:
+                # Check if this slice has any SAX contours
+                has_sax = any(
+                    np.any((self.contour_type == ct) & (self.slice_number == slice_id))
+                    for ct in sax_contour_types
+                )
+                # Check if this slice has any LAX contours (but not SAX)
+                slice_mask = self.slice_number == slice_id
+                slice_contours = self.contour_type[slice_mask]
+                has_lax_only = any(
+                    ct in slice_contours
+                    for ct in [ContourType.LAX_LV_ENDOCARDIAL, ContourType.LAX_LV_EPICARDIAL,
+                              ContourType.LAX_RV_FREEWALL, ContourType.LAX_RV_SEPTUM]
+                ) and not has_sax
+                
+                if has_lax_only:
+                    raise ValueError(
+                        f"Slice ID {slice_id} in lv_only_slice_ids is a LAX slice. "
+                        "Only SAX slice IDs should be provided. LAX slices should never be in this list."
+                    )
 
         stopping_criterion = 5
         # The stopping_criterion is the residual translation
@@ -787,7 +967,7 @@ class GPDataSet(object):
             int_t = []
 
             for index, id in enumerate(self.slices.keys()):
-                t = self._get_slice_shift_sinclair(id, iteration_num, fix_lax)
+                t = self._get_slice_shift_sinclair(id, iteration_num, fix_lax, lv_only_slice_ids)
                 position[index, :] = self.slices[id].position # there should always be a non-zerosposition
                 if not (t is None):
                     nb_translations += 1
@@ -909,7 +1089,7 @@ class GPDataSet(object):
         return redundant_slices, valid_index
 
     # @profile
-    def _get_slice_shift_sinclair(self, slice_number, iter, fix_LAX=False):
+    def _get_slice_shift_sinclair(self, slice_number, iter, fix_LAX=False, lv_only_slice_ids=[]):
         """
         computes translation of slice #slice_number minimizing the
         distance between it's corresponding contour points  and the
@@ -917,6 +1097,7 @@ class GPDataSet(object):
         any other slice of the stack
         input:
             slice_number : slice number to compute the translation for
+            lv_only_slice_ids : list of slice IDs that should only use LV endo/epi contours
         returns:
          t : 2D translation vector, empty array if no intersection points
             have been found
@@ -935,6 +1116,19 @@ class GPDataSet(object):
             ContourType.LAX_RV_FREEWALL,
             ContourType.LAX_LV_EPICARDIAL,
         ]
+
+        # If this slice should only use LV contours, filter the contour list
+        # Indices 0 and 4 are LV_ENDOCARDIAL and LV_EPICARDIAL
+        # Indices 1, 2, 3 are RV_FREEWALL, RV_SEPTUM, RV_OUTLET
+        if slice_number in lv_only_slice_ids:
+            sax_registered_contours = [
+                sax_registered_contours[0],  # SAX_LV_ENDOCARDIAL
+                sax_registered_contours[4],  # SAX_LV_EPICARDIAL
+            ]
+            lax_registered_contours = [
+                lax_registered_contours[0],  # LAX_LV_ENDOCARDIAL
+                lax_registered_contours[4],  # LAX_LV_EPICARDIAL
+            ]
 
         # associated_surface = [Surface.LV_ENDOCARDIAL]
         p2_reference = []
@@ -1699,6 +1893,192 @@ class GPDataSet(object):
             dist_mitral_apex = np.linalg.norm(mitral_centroid - apex_point)
 
         return dist_mitral_apex
+
+    def filter_sax_lv_epicardial_points(self, slice_ids_to_filter=[17, 18], my_logger=None):
+        """
+        Filter SAX_LV_EPICARDIAL guidepoints for specified slice IDs by removing points
+        on the septal side of a plane fitted to first/last RV_septum points from all other SAX slices.
+        
+        This method modifies the GPDataSet in-place by setting weights to 0 and contour_type to EXCLUDED
+        for filtered points.
+        
+        Parameters:
+        -----------
+        slice_ids_to_filter : list of int
+            Slice IDs (slice_number/image_id) to filter (default: [17, 18])
+        my_logger : logger
+            Logger instance for logging messages
+        """
+        if my_logger is None:
+            my_logger = logger
+        
+        # Collect first and last RV_septum points from all SAX slices except filtered ones
+        rv_septum_points_for_plane = []
+        
+        # Get unique SAX slice IDs (excluding filtered ones)
+        sax_mask = self.contour_type == ContourType.SAX_RV_SEPTUM
+        sax_slice_ids = np.unique(self.slice_number[sax_mask])
+        sax_slice_ids = sax_slice_ids[~np.isin(sax_slice_ids, slice_ids_to_filter)]
+        
+        for slice_id in sax_slice_ids:
+            # Get all RV_septum points for this slice
+            mask = (self.contour_type == ContourType.SAX_RV_SEPTUM) & (self.slice_number == slice_id)
+            slice_points = self.points_coordinates[mask]
+            
+            if len(slice_points) > 0:
+                # Get first and last points (maintaining order as in original data)
+                first_point = slice_points[0]
+                last_point = slice_points[-1]
+                rv_septum_points_for_plane.append(first_point)
+                rv_septum_points_for_plane.append(last_point)
+        
+        if len(rv_septum_points_for_plane) < 3:
+            my_logger.warning(f'Not enough RV_septum points to fit plane. Skipping filtering.')
+            return
+        
+        # Fit plane to first/last RV_septum points
+        rv_septum_points_for_plane = np.array(rv_septum_points_for_plane)
+        try:
+            # Center the points
+            centroid = np.mean(rv_septum_points_for_plane, axis=0)
+            centered_points = rv_septum_points_for_plane - centroid
+            # Use SVD to find the plane normal
+            U, s, Vt = np.linalg.svd(centered_points)
+            # Normal is the last column of V (or last row of Vt)
+            normal = Vt[-1, :]
+            # Normalize the normal vector
+            plane_normal = normal / np.linalg.norm(normal)
+            plane_point = centroid
+        except Exception as e:
+            my_logger.error(f'Error fitting plane: {e}')
+            return
+        
+        # Determine which side is the septal side
+        # Get all RV_septum points (from all slices) to determine which side has majority
+        all_rv_septum_mask = self.contour_type == ContourType.SAX_RV_SEPTUM
+        all_rv_septum_points = self.points_coordinates[all_rv_septum_mask]
+        
+        if len(all_rv_septum_points) > 0:
+            # Calculate signed distances to plane for all RV_septum points
+            vecs = all_rv_septum_points - plane_point
+            signed_distances = np.dot(vecs, plane_normal)
+            
+            # The side with the majority of points is the septal side
+            mean_dist = np.mean(signed_distances)
+            if abs(mean_dist) < 1e-10:  # If mean is essentially zero, use majority count
+                positive_count = np.sum(signed_distances > 0)
+                negative_count = np.sum(signed_distances < 0)
+                septal_side_sign = 1 if positive_count >= negative_count else -1
+            else:
+                septal_side_sign = np.sign(mean_dist)
+        else:
+            my_logger.warning(f'No RV_septum points found. Using default side.')
+            septal_side_sign = 1  # Default to positive side
+        
+        # Filter SAX_LV_EPICARDIAL points for specified slice IDs
+        num_removed_total = 0
+        for slice_id in slice_ids_to_filter:
+            # Find SAX_LV_EPICARDIAL points for this slice
+            lv_epi_mask = (self.contour_type == ContourType.SAX_LV_EPICARDIAL) & (self.slice_number == slice_id)
+            
+            if np.any(lv_epi_mask):
+                lv_epi_points = self.points_coordinates[lv_epi_mask]
+                lv_epi_indices = np.where(lv_epi_mask)[0]
+                
+                # Check which side of plane each point is on
+                vecs_to_points = lv_epi_points - plane_point
+                signed_dists = np.dot(vecs_to_points, plane_normal)
+                
+                # If point is on the septal side (same sign as majority of septum points), exclude it
+                for i, signed_dist in enumerate(signed_dists):
+                    if np.sign(signed_dist) == septal_side_sign:
+                        self.weights[lv_epi_indices[i]] = 0.0
+                        self.contour_type[lv_epi_indices[i]] = ContourType.EXCLUDED
+                
+                num_removed = np.sum(np.sign(signed_dists) == septal_side_sign)
+                num_removed_total += num_removed
+                my_logger.info(f'Removed {num_removed} SAX_LV_EPICARDIAL points from slice {slice_id}')
+        
+        if num_removed_total > 0:
+            my_logger.success(f'Filtered SAX_LV_EPICARDIAL points: removed {num_removed_total} points total')
+
+    def filter_3ch_lv_epicardial_points(self, processing_folder, batch_ID, my_logger=None):
+        """
+        Filter LAX_LV_EPICARDIAL guidepoints for all LAX views by removing points
+        that are within 2 pixels of LAX_RV_SEPTUM guidepoints from the same frameID.
+        
+        This method modifies the GPDataSet in-place by setting weights to 0 and contour_type to EXCLUDED
+        for filtered points. Applies to all frameIDs that have both LAX_LV_EPICARDIAL and LAX_RV_SEPTUM points
+        (includes 2ch, 3ch, 4ch, and other LAX views).
+        
+        Parameters:
+        -----------
+        processing_folder : Path or str
+            Path to processing folder (not used, kept for API compatibility)
+        batch_ID : str
+            Batch ID (case name) (not used, kept for API compatibility)
+        my_logger : logger
+            Logger instance for logging messages
+        """
+        if my_logger is None:
+            my_logger = logger
+        
+        # Find all frameIDs that have both LAX_LV_EPICARDIAL and LAX_RV_SEPTUM points
+        lax_lv_epi_frame_ids = np.unique(self.slice_number[self.contour_type == ContourType.LAX_LV_EPICARDIAL])
+        lax_rv_septum_frame_ids = np.unique(self.slice_number[self.contour_type == ContourType.LAX_RV_SEPTUM])
+        
+        # Find frameIDs that have both contour types
+        lax_frame_ids = np.intersect1d(lax_lv_epi_frame_ids, lax_rv_septum_frame_ids)
+        
+        if len(lax_frame_ids) == 0:
+            my_logger.info('No LAX views with both LAX_LV_EPICARDIAL and LAX_RV_SEPTUM points found. Skipping filtering.')
+            return
+        
+        my_logger.info(f'Filtering LAX views: found {len(lax_frame_ids)} frameIDs with both LAX_LV_EPICARDIAL and LAX_RV_SEPTUM: {lax_frame_ids.tolist()}')
+        
+        num_removed_total = 0
+        
+        # Process each LAX frameID
+        for frame_id in lax_frame_ids:
+            # Find LAX_LV_EPICARDIAL and LAX_RV_SEPTUM points for this frameID
+            lv_epi_mask = (self.contour_type == ContourType.LAX_LV_EPICARDIAL) & (self.slice_number == frame_id)
+            rv_septum_mask = (self.contour_type == ContourType.LAX_RV_SEPTUM) & (self.slice_number == frame_id)
+            
+            if not np.any(lv_epi_mask):
+                continue  # No LV epicardial points for this frameID
+            
+            if not np.any(rv_septum_mask):
+                continue  # No RV septum points for this frameID
+            
+            # Get points
+            lv_epi_points = self.points_coordinates[lv_epi_mask]
+            rv_septum_points = self.points_coordinates[rv_septum_mask]
+            lv_epi_indices = np.where(lv_epi_mask)[0]
+            
+            # Build KD-tree for efficient nearest neighbor search
+            rv_septum_tree = cKDTree(rv_septum_points)
+            
+            # Find distance to nearest RV_septum point for each LV_epicardial point
+            distances, _ = rv_septum_tree.query(lv_epi_points, k=1)
+            
+            # Filter points within 2 pixels
+            points_to_filter = distances <= 2.0
+            
+            # Set weights to 0 and contour_type to EXCLUDED for filtered points
+            filtered_indices = lv_epi_indices[points_to_filter]
+            for idx in filtered_indices:
+                self.weights[idx] = 0.0
+                self.contour_type[idx] = ContourType.EXCLUDED
+            
+            num_removed = np.sum(points_to_filter)
+            num_removed_total += num_removed
+            if num_removed > 0:
+                my_logger.info(f'Removed {num_removed} LAX_LV_EPICARDIAL points from LAX frameID {frame_id} (within 2 pixels of LAX_RV_SEPTUM)')
+        
+        if num_removed_total > 0:
+            my_logger.success(f'Filtered LAX LAX_LV_EPICARDIAL points: removed {num_removed_total} points total')
+        else:
+            my_logger.info('No LAX LAX_LV_EPICARDIAL points were filtered')
 
     def write_gpfile(self, file_name, time_frame=None):
         """

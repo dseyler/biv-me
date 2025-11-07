@@ -13,7 +13,7 @@ from .surface_enum import Surface
 import scipy.sparse as sp
 
 def solve_convex_problem(
-    biv_model: BiventricularModel, data_set: GPDataSet, weight_gp: float, low_smoothing_weight: float, transmural_weight: float, my_logger: logger, collision_detection = False, model_prior : BiventricularModel = None
+    biv_model: BiventricularModel, data_set: GPDataSet, weight_gp: float, low_smoothing_weight: float, transmural_weight: float, my_logger: logger, collision_detection = False, model_prior : BiventricularModel = None, pulmonary_circularity_weight: float = 0.0
 ) -> float:
     """This function performs the proper diffeomorphic fit.
     Parameters
@@ -54,6 +54,12 @@ def solve_convex_problem(
     A = GTPTWTWPG + low_smoothing_weight * (
         biv_model.gtstsg_x + biv_model.gtstsg_y + transmural_weight * biv_model.gtstsg_z
     )
+    
+    # Add pulmonary artery circularity regularization if enabled
+    if pulmonary_circularity_weight > 0:
+        R_pulmonary = biv_model.compute_pulmonary_artery_circularity_matrix()
+        A = A + pulmonary_circularity_weight * R_pulmonary
+    
     Wd = np.dot(w, data_points - prior_position)
 
     previous_step_err = 0
@@ -186,7 +192,7 @@ def solve_convex_problem(
     my_logger.success(f"End of the explicitly constrained fit. Time taken: {time.time() - start_time}")
     return residuals
 
-def fit_least_squares_model(biv_model: BiventricularModel, weight_gp: float, data_set: GPDataSet, smoothing_factor: float) -> [np.ndarray, float]:
+def fit_least_squares_model(biv_model: BiventricularModel, weight_gp: float, data_set: GPDataSet, smoothing_factor: float, pulmonary_circularity_weight: float = 0.0) -> [np.ndarray, float]:
     [
         index,
         weights,
@@ -205,6 +211,11 @@ def fit_least_squares_model(biv_model: BiventricularModel, weight_gp: float, dat
     A = GTPTWTWPG + smoothing_factor * (
         biv_model.gtstsg_x + biv_model.gtstsg_y + 0.001 * biv_model.gtstsg_z
     )
+    
+    # Add pulmonary artery circularity regularization if enabled
+    if pulmonary_circularity_weight > 0:
+        R_pulmonary = biv_model.compute_pulmonary_artery_circularity_matrix()
+        A = A + pulmonary_circularity_weight * R_pulmonary
 
     data_points_position = data_set.points_coordinates[index]
     wd = np.linalg.multi_dot([w, data_points_position - prior_position])
@@ -217,7 +228,7 @@ def fit_least_squares_model(biv_model: BiventricularModel, weight_gp: float, dat
     err = np.sqrt(np.sum(err) / len(prior_position))
     return solf, err
 
-def fit_least_squares_model_with_prior(biv_model: BiventricularModel, weight_gp: float, prior_model: BiventricularModel, smoothing_factor: float) -> [np.ndarray, float]:
+def fit_least_squares_model_with_prior(biv_model: BiventricularModel, weight_gp: float, prior_model: BiventricularModel, smoothing_factor: float, pulmonary_circularity_weight: float = 0.0) -> [np.ndarray, float]:
 
     projected_points_basis_coeff = biv_model.basis_matrix
     data_points_position = prior_model.et_pos
@@ -234,6 +245,11 @@ def fit_least_squares_model_with_prior(biv_model: BiventricularModel, weight_gp:
     A = GTPTWTWPG + smoothing_factor * (
         biv_model.gtstsg_x + biv_model.gtstsg_y + 0.001 * biv_model.gtstsg_z
     )
+    
+    # Add pulmonary artery circularity regularization if enabled
+    if pulmonary_circularity_weight > 0:
+        R_pulmonary = biv_model.compute_pulmonary_artery_circularity_matrix()
+        A = A + pulmonary_circularity_weight * R_pulmonary
 
     wd = np.linalg.multi_dot([w, data_points_position - prior_position])
     rhs = np.linalg.multi_dot([w_pg.T, wd])
@@ -245,7 +261,7 @@ def fit_least_squares_model_with_prior(biv_model: BiventricularModel, weight_gp:
     err = np.sqrt(np.sum(err) / len(prior_position))
     return solf, err
 
-def solve_least_squares_problem(biv_model : BiventricularModel, weight_gp: float, data_set : GPDataSet, my_logger, collision_detection : bool = False, model_prior : BiventricularModel = None):
+def solve_least_squares_problem(biv_model : BiventricularModel, weight_gp: float, data_set : GPDataSet, my_logger, collision_detection : bool = False, model_prior : BiventricularModel = None, pulmonary_circularity_weight: float = 0.0):
     """This function performs a series of LLS fits. At each iteration the
     least squares optimisation is performed and the determinant of the
     Jacobian matrix is calculated.
@@ -270,9 +286,9 @@ def solve_least_squares_problem(biv_model : BiventricularModel, weight_gp: float
     while (isdiffeo == 1) & (high_weight > weight_gp * 1e2) & (iteration < 50) & (collision_iteration < 3):
 
         if collision_detection:
-            displacement, err = fit_least_squares_model_with_prior(biv_model, weight_gp, model_prior, high_weight)
+            displacement, err = fit_least_squares_model_with_prior(biv_model, weight_gp, model_prior, high_weight, pulmonary_circularity_weight)
         else:
-            displacement, err = fit_least_squares_model(biv_model, weight_gp, data_set, high_weight)
+            displacement, err = fit_least_squares_model(biv_model, weight_gp, data_set, high_weight, pulmonary_circularity_weight)
 
         my_logger.info(f"     Iteration {iteration} Weight {high_weight}	 ICF error {err}")
 

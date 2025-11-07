@@ -18,6 +18,7 @@ from bivme.fitting.diffeomorphic_fitting_utils import (
     solve_convex_problem,
     plot_timeseries,
 )
+from bivme.fitting.temporal_smoothing import smooth_control_meshes_temporal
 from bivme.plotting.plot_guidepoints import plot_images
 
 from bivme.meshing.mesh_io import write_vtk_surface, export_to_obj
@@ -118,7 +119,15 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
             )
             if not ed_dataset.success:
                 return -1
-            result_at_ed = ed_dataset.sinclair_slice_shifting(my_logger)
+            
+            # Get slice IDs that should use only LV contours for shift calculation
+            lv_only_slice_ids = []
+            if config.get("gp_processing", {}).get("filter_sax_lv_epicardial", False):
+                lv_only_slice_ids = config.get("gp_processing", {}).get("filter_sax_lv_epicardial_slice_ids", [])
+                if not isinstance(lv_only_slice_ids, list):
+                    lv_only_slice_ids = []
+            
+            result_at_ed = ed_dataset.sinclair_slice_shifting(my_logger, lv_only_slice_ids=lv_only_slice_ids)
             _, _ = ed_dataset.get_unintersected_slices()
 
             ##TODO remove basal slice (maybe looking at the distance between the contours centroid and the projection of the line mitral centroid/apex)
@@ -140,6 +149,14 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
             shift_to_apply = 0  # 2D translation
             updated_slice_position = 0
             counter = 0
+            
+            # Get slice IDs that should use only LV contours for shift calculation
+            lv_only_slice_ids = []
+            if config.get("gp_processing", {}).get("filter_sax_lv_epicardial", False):
+                lv_only_slice_ids = config.get("gp_processing", {}).get("filter_sax_lv_epicardial_slice_ids", [])
+                if not isinstance(lv_only_slice_ids, list):
+                    lv_only_slice_ids = []
+            
             for frame in sorted(frames_to_fit):
                 num = int(frame)
                 filename = Path(folder) / f"GPFile_{gp_suffix}{num:03}.txt"
@@ -159,7 +176,7 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                     ed_dataset = deepcopy(dataset)
                 if not dataset.success:
                     continue
-                result_at_t = dataset.sinclair_slice_shifting(my_logger)
+                result_at_t = dataset.sinclair_slice_shifting(my_logger, lv_only_slice_ids=lv_only_slice_ids)
 
                 shift_to_apply += result_at_t[0]
                 updated_slice_position += result_at_t[1]
@@ -209,6 +226,7 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
         my_logger.info(f"Fitting of {str(case)}")
 
         residuals = 0
+        frame_residuals = {}  # Track residuals per frame for temporal smoothing
         with Progress(auto_refresh=False, transient=True) as progress:
             task = progress.add_task(f"Processing {len(frames_to_fit)} frames of {case}", total=len(frames_to_fit))
             console = progress
@@ -240,6 +258,11 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                 if config["breathhold_correction"]["shifting"] != "none":
                     data_set.apply_slice_shift(shift_to_apply, updated_slice_position)
                     data_set.get_unintersected_slices()
+
+                # Filter SAX_LV_EPICARDIAL guidepoints (if enabled) - after breathhold correction
+                if config.get("gp_processing", {}).get("filter_sax_lv_epicardial", False):
+                    slice_ids_to_filter = config.get("gp_processing", {}).get("filter_sax_lv_epicardial_slice_ids", [17, 18])
+                    data_set.filter_sax_lv_epicardial_points(slice_ids_to_filter, my_logger)
 
                 # Generates RV epicardial point if they have not been contoured
                 if sum(data_set.contour_type == (ContourType.SAX_RV_EPICARDIAL)) == 0 and sum(data_set.contour_type == ContourType.LAX_RV_EPICARDIAL) == 0:
@@ -284,17 +307,186 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
 
                 # Perform linear fit
                 biventricular_model = deepcopy(aligned_biventricular_model)
-                solve_least_squares_problem(biventricular_model, config["fitting_weights"]["guide_points"], data_set, my_logger)
+                pulmonary_circularity_weight = config["fitting_weights"].get("pulmonary_artery_circularity", 0.0)
+                solve_least_squares_problem(
+                    biventricular_model, 
+                    config["fitting_weights"]["guide_points"], 
+                    data_set, 
+                    my_logger,
+                    pulmonary_circularity_weight=pulmonary_circularity_weight
+                )
 
                 ## Perform diffeomorphic fit
-                residuals += solve_convex_problem(
+                frame_residual = solve_convex_problem(
                     biventricular_model,
                     data_set,
                     config["fitting_weights"]["guide_points"],
                     config["fitting_weights"]["convex_problem"],
                     config["fitting_weights"]["transmural"],
                     my_logger,
-                ) / len(sorted(frames_to_fit))
+                    pulmonary_circularity_weight=pulmonary_circularity_weight,
+                )
+                frame_residuals[num] = frame_residual  # Store per-frame residual
+                residuals += frame_residual / len(sorted(frames_to_fit))
+
+                # Pulmonary artery refitting (if enabled)
+                if config.get("pulmonary_artery_refitting", {}).get("enabled", False):
+                    my_logger.info(f"Performing pulmonary artery refitting for frame #{num}")
+                    
+                    # Generate new longitudinal-aligned pulmonary phantom points
+                    num_pv_points = config["gp_processing"]["num_of_phantom_points_pv"]
+                    new_phantom_points = GPDataSet.generate_longitudinal_aligned_pulmonary_phantom_points(
+                        biventricular_model, num_pv_points, my_logger
+                    )
+                    
+                    if len(new_phantom_points) > 0:
+                        # Create a deepcopy of the dataset for refitting
+                        data_set_refit = deepcopy(data_set)
+                        
+                        # Replace pulmonary valve points with new phantom points
+                        data_set_refit.replace_pulmonary_valve_points(new_phantom_points, weight=1.0)
+                        
+                        # Reinitialize landmarks for refit dataset
+                        data_set_refit.identify_mitral_valve_points()
+                        
+                        # Create new model instances for refitting
+                        biventricular_model_refit = deepcopy(aligned_biventricular_model)
+                        
+                        # Perform refitting (least squares + diffeomorphic fit)
+                        # Use same weights but disable circularity regularization during refitting
+                        solve_least_squares_problem(
+                            biventricular_model_refit,
+                            config["fitting_weights"]["guide_points"],
+                            data_set_refit,
+                            my_logger,
+                            pulmonary_circularity_weight=0.0  # Disabled during refitting
+                        )
+                        
+                        solve_convex_problem(
+                            biventricular_model_refit,
+                            data_set_refit,
+                            config["fitting_weights"]["guide_points"],
+                            config["fitting_weights"]["convex_problem"],
+                            config["fitting_weights"]["transmural"],
+                            my_logger,
+                            pulmonary_circularity_weight=0.0  # Disabled during refitting
+                        )
+                        
+                        # Save refitted model .txt file
+                        refitted_output_folder = Path(output_folder, "refitted")
+                        refitted_output_folder.mkdir(exist_ok=True)
+                        refitted_model_file = Path(
+                            refitted_output_folder, f"{case}{gp_suffix}_model_frame_{num:03}.txt"
+                        )
+                        refitted_model_data = {
+                            "x": biventricular_model_refit.control_mesh[:, 0],
+                            "y": biventricular_model_refit.control_mesh[:, 1],
+                            "z": biventricular_model_refit.control_mesh[:, 2],
+                            "Frame": [num] * len(biventricular_model_refit.control_mesh[:, 2]),
+                        }
+                        refitted_model_data_frame = pd.DataFrame(data=refitted_model_data)
+                        with open(refitted_model_file, "w") as file:
+                            file.write(
+                                refitted_model_data_frame.to_csv(
+                                    header=True, index=False, sep=",", lineterminator="\n"
+                                )
+                            )
+                        
+                        # Generate HTML plot for refitted model
+                        if config["plotting"]["generate_plots_fitting"]:
+                            refitted_contour_plots = data_set_refit.plot_dataset(contours_to_plot)
+                            refitted_model = biventricular_model_refit.plot_surface(
+                                "rgb(0,127,0)", "rgb(0,127,127)", "rgb(127,0,0)", "all"
+                            )
+                            refitted_data = refitted_contour_plots + refitted_model
+                            
+                            if config["plotting"]["include_images"]:
+                                image_dir = Path(config["input_pp"]["processing"]) / config["input_pp"]["batch_ID"] / os.path.basename(case) / "images"
+                                if image_dir.exists():
+                                    output_dir = Path(output_folder) / "images" if config["plotting"]["export_images"] else None
+                                    refitted_image_plots, _ = plot_images(image_dir, data_set_refit, {}, output_dir, shift_to_apply, num)
+                                    refitted_data += refitted_image_plots
+                            
+                            output_folder_html_refitted = Path(output_folder, "html_refitted")
+                            output_folder_html_refitted.mkdir(exist_ok=True)
+                            
+                            refitted_figure = go.Figure(data=refitted_data)
+                            refitted_figure.update_layout(
+                                paper_bgcolor='white',
+                                title=f"Refitted model and guidepoints for {case} - Frame {num:03}",
+                            )
+                            refitted_figure.update_scenes(xaxis_visible=False, yaxis_visible=False, zaxis_visible=False)
+                            
+                            plot(
+                                refitted_figure,
+                                filename=os.path.join(
+                                    output_folder_html_refitted, f"{case}_refitted_model_frame_{num:03}.html"
+                                ),
+                                auto_open=False,
+                            )
+                        
+                        # Generate VTK/OBJ files for refitted model
+                        if output_format != "none":
+                            refitted_meshes = {}
+                            for surface in Surface:
+                                mesh_data = {}
+                                if surface.name in config["output_fitting"]["output_meshes"]:
+                                    mesh_data[surface.name] = surface.value
+                                    if surface.name == "LV_ENDOCARDIAL" and config["output_fitting"]["closed_mesh"] == True:
+                                        mesh_data["MITRAL_VALVE"] = Surface.MITRAL_VALVE.value
+                                        mesh_data["AORTA_VALVE"] = Surface.AORTA_VALVE.value
+                                    if surface.name == "EPICARDIAL" and config["output_fitting"]["closed_mesh"] == True:
+                                        mesh_data["PULMONARY_VALVE"] = Surface.PULMONARY_VALVE.value
+                                        mesh_data["TRICUSPID_VALVE"] = Surface.TRICUSPID_VALVE.value
+                                        mesh_data["MITRAL_VALVE"] = Surface.MITRAL_VALVE.value
+                                        mesh_data["AORTA_VALVE"] = Surface.AORTA_VALVE.value
+                                    refitted_meshes[surface.name] = mesh_data
+                            
+                            if "RV_ENDOCARDIAL" in config["output_fitting"]["output_meshes"]:
+                                rv_mesh_data = {}
+                                rv_mesh_data["RV_SEPTUM"] = Surface.RV_SEPTUM.value
+                                rv_mesh_data["RV_FREEWALL"] = Surface.RV_FREEWALL.value
+                                if config["output_fitting"]["closed_mesh"]:
+                                    rv_mesh_data["PULMONARY_VALVE"] = Surface.PULMONARY_VALVE.value
+                                    rv_mesh_data["TRICUSPID_VALVE"] = Surface.TRICUSPID_VALVE.value
+                                refitted_meshes["RV_ENDOCARDIAL"] = rv_mesh_data
+                            
+                            # Create vtk_PA output directory
+                            output_folder_vtk_pa = Path(output_folder, "vtk_PA")
+                            output_folder_vtk_pa.mkdir(exist_ok=True)
+                            
+                            for key, value in refitted_meshes.items():
+                                vertices = np.array([]).reshape(0, 3)
+                                faces_mapped = np.array([], dtype=np.int64).reshape(0, 3)
+                                
+                                offset = 0
+                                for type in value:
+                                    start_fi = biventricular_model_refit.surface_start_end[value[type]][0]
+                                    end_fi = biventricular_model_refit.surface_start_end[value[type]][1] + 1
+                                    faces_et = biventricular_model_refit.et_indices[start_fi:end_fi]
+                                    unique_inds = np.unique(faces_et.flatten())
+                                    vertices = np.vstack((vertices, biventricular_model_refit.et_pos[unique_inds]))
+                                    
+                                    # remap faces/indices to 0-indexing
+                                    mapping = {old_index: new_index for new_index, old_index in enumerate(unique_inds)}
+                                    faces_mapped = np.vstack((faces_mapped, np.vectorize(mapping.get)(faces_et) + offset))
+                                    offset += len(biventricular_model_refit.et_pos[unique_inds])
+                                
+                                if output_format == ".vtk":
+                                    mesh_path = Path(
+                                        output_folder_vtk_pa, f"{case}_{key}_{num:03}.vtk"
+                                    )
+                                    write_vtk_surface(str(mesh_path), vertices, faces_mapped)
+                                    my_logger.success(f"{case}_{key}_{num:03}.vtk successfully saved to {output_folder_vtk_pa}")
+                                
+                                elif output_format == ".obj":
+                                    mesh_path = Path(
+                                        output_folder_vtk_pa, f"{case}_{key}_{num:03}.obj"
+                                    )
+                                    export_to_obj(mesh_path, vertices, faces_mapped)
+                                    my_logger.success(f"{case}_{key}_{num:03}.obj successfully saved to {output_folder_vtk_pa}")
+                    else:
+                        my_logger.warning(f"Could not generate pulmonary phantom points for frame #{num}, skipping refitting")
 
                 if config["plotting"]["generate_plots_fitting"]:
                     # Plot final results
@@ -480,6 +672,29 @@ def perform_fitting(folder: str,  config: dict, out_dir: str ="./results/", gp_s
                                 return -1
 
                 progress.advance(task)
+        
+        # Apply temporal smoothing if enabled
+        if config.get("temporal_smoothing", {}).get("enabled", False):
+            # If refitting is enabled, smooth refitted models instead of original
+            if config.get("pulmonary_artery_refitting", {}).get("enabled", False):
+                my_logger.info("Applying temporal smoothing to refitted models...")
+                # Use refitted directory for input
+                refitted_folder = Path(output_folder, "refitted")
+                if refitted_folder.exists():
+                    smooth_control_meshes_temporal(
+                        refitted_folder, case, gp_suffix, folder, filename_info, si_suffix, 
+                        config, output_format, my_logger, vtk_output_subdir="vtk_PA"
+                    )
+                else:
+                    my_logger.warning("Refitted folder not found, skipping temporal smoothing")
+            else:
+                my_logger.info("Applying temporal smoothing to fitted models...")
+                smooth_control_meshes_temporal(
+                    output_folder, case, gp_suffix, folder, filename_info, si_suffix, 
+                    config, output_format, my_logger
+                )
+            my_logger.success("Temporal smoothing completed.")
+        
         return residuals
     except KeyboardInterrupt:
         return -1

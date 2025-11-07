@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description='Run biv-me modules')
     parser.add_argument('-config', '--config_file', type=str,
-                        help='Config file describing which modules to run and their associated parameters', default='configs/config.toml')
+                        help='Config file describing which modules to run and their associated parameters', default='configs/config_pig.toml')
     args = parser.parse_args()
 
     # Set up logging
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                         "processing": str(),
                         "states": str()
                         },
-            "view-selection": {"option": str(), "correct_mode": str()},
+            "view-selection": {"option": str(), "correct_mode": str(), "use_precomputed_segmentations": bool()},
             "contouring": {"smooth_landmarks": bool()},
             "output_pp": {"overwrite": bool(), "output_directory": str()},
 
@@ -166,6 +166,9 @@ if __name__ == "__main__":
                 continue
             else:
                 logger.info("Running preprocessing...")
+                print("Load view predictions: ", config["view-selection"]["option"])
+                print("Precomputed segmentations: ", config["view-selection"]["use_precomputed_segmentations"])
+
                 run_preprocessing(case, config, logger)
                 if not config["logging"]["show_detailed_logging"]:
                     logger.add(sys.stderr) # need add sink for log again
